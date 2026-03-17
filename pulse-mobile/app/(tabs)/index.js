@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  StatusBar, ActivityIndicator,
+  StatusBar, ActivityIndicator, Platform,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { C, FONTS } from '../../constants/colors';
 import { API_BASE } from '../../constants/api';
@@ -22,6 +23,7 @@ function QuickTile({ label, icon, onPress }) {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [apiStatus, setApiStatus] = useState('connecting');
   const [concerns, setConcerns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,20 +64,19 @@ export default function HomeScreen() {
   }, []);
 
   const count   = concerns.length;
-  const peakSev = count ? Math.max(...concerns.map((c) => c.severity || 0)) : 0;
+  const peakSev = count ? Math.max(...concerns.map(c => c.severity || 0)) : 0;
   const recent  = concerns.slice(-4).reverse();
 
   const dotColor =
-    apiStatus === 'offline' ? C.red :
-    apiStatus === 'connecting' ? C.gray400 :
-    '#22C55E';
+    apiStatus === 'offline'    ? C.red :
+    apiStatus === 'connecting' ? C.gray400 : '#22C55E';
   const dotLabel =
     apiStatus === 'offline'    ? 'API offline' :
     apiStatus === 'connecting' ? 'Connecting…' :
     apiStatus === 'granite'    ? 'Granite live' : 'Mock mode';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
 
       {/* Top bar */}
@@ -87,13 +88,18 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
         {/* Hero card */}
         <View style={styles.hero}>
           <Text style={styles.heroEye}>● Next Step</Text>
           <Text style={styles.heroName}>Alex Johnson</Text>
           <Text style={styles.heroSub}>
-            {count} day{count !== 1 ? 's' : ''} of symptoms logged
+            {count} concern{count !== 1 ? 's' : ''} logged
+            {count > 0 ? ` · Peak severity ${peakSev}/10` : ''}
           </Text>
           <View style={styles.heroPills}>
             <View style={styles.heroPill}>
@@ -128,7 +134,17 @@ export default function HomeScreen() {
             recent.map((c, i) => {
               const high = c.urgency_level === 'high';
               return (
-                <View key={i} style={[styles.concernRow, i === recent.length - 1 && { borderBottomWidth: 0 }]}>
+                <Pressable
+                  key={c.id || i}
+                  style={[
+                    styles.concernRow,
+                    i === recent.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                  onPress={() => router.push({
+                    pathname: '/(tabs)/edit-concern',
+                    params: { concern: JSON.stringify(c) },
+                  })}
+                >
                   <View style={[styles.cDot, { backgroundColor: high ? C.red : C.gray400 }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cName} numberOfLines={1}>{c.symptom || 'No description'}</Text>
@@ -141,7 +157,7 @@ export default function HomeScreen() {
                       {(c.urgency_level || 'low').toUpperCase()}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })
           )}
@@ -190,8 +206,6 @@ export default function HomeScreen() {
             }
           />
         </View>
-
-        <View style={{ height: 24 }} />
       </ScrollView>
     </View>
   );
@@ -199,17 +213,17 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.white },
-  topBar:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 10 },
+  topBar:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
   topTitle:     { fontFamily: FONTS.display, fontSize: 32, color: C.black, letterSpacing: 1 },
   apiPill:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.gray100, borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10 },
   apiDot:       { width: 6, height: 6, borderRadius: 3 },
-  apiTxt:       { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: C.gray400 },
+  apiTxt:       { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: C.gray400, fontFamily: FONTS.bodySemi },
   scroll:       { flex: 1, paddingHorizontal: 20 },
 
   hero:         { backgroundColor: C.black, borderRadius: 14, padding: 18, marginBottom: 12 },
-  heroEye:      { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.red, marginBottom: 5 },
+  heroEye:      { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.red, marginBottom: 5, fontFamily: FONTS.bodySemi },
   heroName:     { fontFamily: FONTS.display, fontSize: 26, color: C.white, letterSpacing: 1, marginBottom: 3 },
-  heroSub:      { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 14 },
+  heroSub:      { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 14, fontFamily: FONTS.body },
   heroPills:    { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
   heroPill:     { backgroundColor: 'rgba(212,43,43,0.15)', borderWidth: 1, borderColor: 'rgba(212,43,43,0.3)', borderRadius: 6, paddingVertical: 5, paddingHorizontal: 10 },
   heroPillTxt:  { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: FONTS.body },
@@ -217,17 +231,17 @@ const styles = StyleSheet.create({
   metricsRow:   { flexDirection: 'row', gap: 10, marginBottom: 14 },
   metricBox:    { flex: 1, backgroundColor: C.gray100, borderRadius: 8, padding: 14 },
   metricVal:    { fontFamily: FONTS.display, fontSize: 36, color: C.black, lineHeight: 36 },
-  metricLbl:    { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, color: C.gray400, marginTop: 3 },
+  metricLbl:    { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, color: C.gray400, marginTop: 3, fontFamily: FONTS.bodySemi },
 
-  sectionHead:  { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.gray400, marginBottom: 8, marginTop: 14 },
+  sectionHead:  { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.gray400, marginBottom: 8, marginTop: 14, fontFamily: FONTS.bodySemi },
   card:         { backgroundColor: C.white, borderRadius: 14, borderWidth: 1, borderColor: C.gray200, marginBottom: 10 },
   emptyTxt:     { color: C.gray400, fontSize: 13, textAlign: 'center', padding: 16, fontFamily: FONTS.body },
   concernRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: C.gray200 },
   cDot:         { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
   cName:        { fontSize: 14, fontWeight: '500', color: C.black, fontFamily: FONTS.bodyMedium },
-  cMeta:        { fontSize: 12, color: C.gray400, marginTop: 2 },
+  cMeta:        { fontSize: 12, color: C.gray400, marginTop: 2, fontFamily: FONTS.body },
   badge:        { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
-  badgeTxt:     { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  badgeTxt:     { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONTS.bodySemi },
 
   quickGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   quickTile:    { width: '48%', backgroundColor: C.gray100, borderRadius: 8, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },

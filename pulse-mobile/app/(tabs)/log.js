@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  StyleSheet, StatusBar, Alert,
+  StyleSheet, StatusBar, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, FONTS } from '../../constants/colors';
 import { API_BASE } from '../../constants/api';
 import BodyMap from '../../components/BodyMap';
@@ -18,7 +19,7 @@ function SeverityPicker({ value, onChange }) {
   return (
     <View>
       <View style={sev.row}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+        {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
           <Pressable
             key={n}
             style={[sev.seg, n <= value && sev.segActive]}
@@ -40,19 +41,20 @@ const sev = StyleSheet.create({
   seg:       { flex: 1, borderRadius: 3, backgroundColor: C.gray200 },
   segActive: { backgroundColor: C.red },
   labels:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  lbl:       { fontSize: 11, color: C.gray400, fontFamily: 'DMSans_400Regular' },
-  num:       { fontFamily: 'BebasNeue_400Regular', fontSize: 26, color: C.black },
+  lbl:       { fontSize: 11, color: C.gray400, fontFamily: FONTS.body },
+  num:       { fontFamily: FONTS.display, fontSize: 26, color: C.black },
 });
 
 export default function LogScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedArea, setSelectedArea] = useState('');
   const [severity, setSeverity]         = useState(5);
   const [urgency, setUrgency]           = useState('medium');
   const [symptom, setSymptom]           = useState('');
   const [notes, setNotes]               = useState('');
   const [saving, setSaving]             = useState(false);
-  const [feedback, setFeedback]         = useState(null); // { type: 'ok'|'err', msg }
+  const [feedback, setFeedback]         = useState(null);
 
   async function submit() {
     if (!selectedArea) {
@@ -80,7 +82,6 @@ export default function LogScreen() {
       });
       const d = await r.json();
       setFeedback({ type: 'ok', msg: `Saved! You have ${d.total_concerns} concerns logged.` });
-      // reset form
       setSelectedArea('');
       setSymptom('');
       setNotes('');
@@ -88,24 +89,31 @@ export default function LogScreen() {
       setUrgency('medium');
       setTimeout(() => router.push('/(tabs)'), 1200);
     } catch {
-      setFeedback({ type: 'err', msg: 'Could not save — is python run.py running?' });
+      setFeedback({ type: 'err', msg: 'Could not save — is the server running?' });
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: C.white }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
 
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.topTitle}>LOG PAIN</Text>
         <Text style={styles.topHint}>Tap the body</Text>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Body Map */}
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Body Map — full size, centered */}
         <Text style={styles.mapNote}>Tap any area to select where it hurts</Text>
         <View style={styles.mapWrap}>
           <BodyMap selectedArea={selectedArea} onSelect={setSelectedArea} />
@@ -132,15 +140,12 @@ export default function LogScreen() {
         <View style={styles.section}>
           <Text style={styles.label}>Urgency Level</Text>
           <View style={styles.urgRow}>
-            {URGENCIES.map((u) => (
+            {URGENCIES.map(u => (
               <Pressable
                 key={u.key}
                 style={[
                   styles.urgBtn,
-                  urgency === u.key && {
-                    backgroundColor: u.bg,
-                    borderColor: u.border,
-                  },
+                  urgency === u.key && { backgroundColor: u.bg, borderColor: u.border },
                 ]}
                 onPress={() => setUrgency(u.key)}
               >
@@ -179,7 +184,6 @@ export default function LogScreen() {
           />
         </View>
 
-        {/* Feedback */}
         {feedback && (
           <View style={[styles.feedbackBox, feedback.type === 'ok' ? styles.fbOk : styles.fbErr]}>
             <Text style={[styles.fbTxt, { color: feedback.type === 'ok' ? '#166534' : C.redDark }]}>
@@ -188,7 +192,6 @@ export default function LogScreen() {
           </View>
         )}
 
-        {/* Actions */}
         <View style={styles.actions}>
           <Pressable
             style={({ pressed }) => [styles.btnRed, pressed && { opacity: 0.85 }, saving && { opacity: 0.5 }]}
@@ -197,23 +200,17 @@ export default function LogScreen() {
           >
             <Text style={styles.btnRedTxt}>{saving ? '...' : 'SAVE CONCERN'}</Text>
           </Pressable>
-          <Pressable
-            style={styles.btnOutline}
-            onPress={() => router.push('/(tabs)')}
-          >
+          <Pressable style={styles.btnOutline} onPress={() => router.push('/(tabs)')}>
             <Text style={styles.btnOutlineTxt}>Cancel</Text>
           </Pressable>
         </View>
-
-        <View style={{ height: 32 }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.white },
-  topBar:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 4 },
+  topBar:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4 },
   topTitle:  { fontFamily: FONTS.display, fontSize: 32, color: C.black, letterSpacing: 1 },
   topHint:   { fontSize: 12, color: C.gray400, fontFamily: FONTS.body },
   scroll:    { flex: 1 },
