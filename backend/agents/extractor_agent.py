@@ -19,9 +19,10 @@ Respond with exactly this JSON structure:
 {{
   "diagnosis": "primary diagnosis name",
   "body_area": "affected body area",
+  "follow_up_date": "exact date or timeframe mentioned (e.g. 'in 3 weeks', 'April 15', '30 days'), or null if not stated",
+  "next_appointment": "when the patient should schedule their next visit, or null if not stated",
   "prescription": "medication name and dosage, or null if none",
-  "key_advice": ["advice point 1", "advice point 2", "advice point 3"],
-  "follow_up": "follow up timeline or specific date",
+  "key_instructions": ["thing the patient must do 1", "thing the patient must do 2"],
   "visit_reason": "brief reason for the visit"
 }}"""
 
@@ -34,8 +35,9 @@ Respond with exactly this JSON structure:
         return {
             "diagnosis": "See doctor note for details",
             "body_area": "Unknown",
+            "follow_up_date": None,
+            "next_appointment": None,
             "prescription": None,
-            "key_advice": ["Follow doctor instructions", "Rest as needed"],
-            "follow_up": "As directed by doctor",
+            "key_instructions": ["Follow doctor instructions", "Rest as needed"],
             "visit_reason": "Medical visit",
         }

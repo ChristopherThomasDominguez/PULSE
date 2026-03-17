@@ -24,8 +24,7 @@ if not MOCK:
         _credentials = Credentials(api_key=IBM_API_KEY, url=IBM_URL)
         _params = {
             "decoding_method": "greedy",
-            "max_new_tokens": 1024,
-            "min_new_tokens": 10,
+            "max_new_tokens": 512,
             "temperature": 0,
         }
         _model = ModelInference(
@@ -34,12 +33,12 @@ if not MOCK:
             project_id=IBM_PROJECT_ID,
             params=_params,
         )
-        print("[Granite] ✅ Connected to IBM watsonx — ibm/granite-4-h-small")
+        print("[Granite] Connected")
     except Exception as e:
         print(f"[Granite] ⚠️  SDK init failed, falling back to mock: {e}")
         MOCK = True
 else:
-    print("[Granite] ⚙️  Running in mock mode (no credentials)")
+    print("[Granite] Mock mode")
 
 
 def granite_generate(prompt: str, max_tokens: int = 512) -> str:

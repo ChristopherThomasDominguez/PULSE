@@ -30,14 +30,27 @@ def detect_patterns(concerns: list) -> dict:
 Analyze these symptom check-ins and identify escalation patterns.
 Respond ONLY with valid JSON. No explanation. No markdown. No code fences.
 
+Rules for escalation_level:
+- Use "urgent" if peak severity >= 8 OR there are 2 or more entries with urgency "high"
+- Use "see_doctor" if peak severity >= 5 OR there is 1 entry with urgency "high"
+- Use "monitor" otherwise
+
+Rules for severity_trend:
+- Compare severity values across check-ins chronologically
+- Use "increasing" if severity is trending upward across multiple days
+- Use "decreasing" if trending downward
+- Use "stable" if little or no change
+
+Also flag if the same body area appears in multiple check-ins (recurring).
+
 Check-ins:
 {checkin_text}
 
 Respond with exactly this JSON structure:
 {{
   "escalation_level": "monitor" or "see_doctor" or "urgent",
-  "pattern_summary": "2-3 sentence summary of symptom pattern and trend",
-  "recurring_areas": ["list", "of", "body", "areas"],
+  "pattern_summary": "2-3 sentence summary of symptom pattern and trend, referencing the specific body area and severity trajectory",
+  "recurring_areas": ["list", "of", "body", "areas", "that appear in multiple check-ins"],
   "severity_trend": "stable" or "increasing" or "decreasing"
 }}"""
 
@@ -108,17 +121,22 @@ Symptom history:
 Pattern analysis:
 {json.dumps(pattern)}
 
+For the "suggested_questions" field, generate exactly 5 clinically specific questions the patient should bring to their doctor.
+Each question MUST reference the actual body area and symptom pattern from the data above — do NOT write generic questions.
+Example of a good question: "Given that my left ankle pain has increased from severity 3 to 8 over 8 days, could this indicate a structural injury like a stress fracture or tendon damage?"
+Questions should address: possible diagnosis, diagnostic tests needed, home management, warning signs requiring urgent care, and long-term prognosis.
+
 Respond with exactly this JSON structure:
 {{
-  "concern_summary": "2-3 sentences summarizing the patient's health concerns for the doctor",
+  "concern_summary": "2-3 sentences summarizing the patient's health concerns for the doctor, referencing the specific body area and severity trend",
   "escalation_decision": "monitor" or "see_doctor" or "urgent",
-  "escalation_reason": "one sentence explaining why this escalation level was chosen",
+  "escalation_reason": "one sentence explaining why this escalation level was chosen, citing specific severity numbers or urgency flags",
   "suggested_questions": [
-    "question 1 to ask the doctor",
-    "question 2 to ask the doctor",
-    "question 3 to ask the doctor",
-    "question 4 to ask the doctor",
-    "question 5 to ask the doctor"
+    "clinically specific question 1 referencing actual body area and symptom data",
+    "clinically specific question 2 referencing actual body area and symptom data",
+    "clinically specific question 3 referencing actual body area and symptom data",
+    "clinically specific question 4 referencing actual body area and symptom data",
+    "clinically specific question 5 referencing actual body area and symptom data"
   ],
   "concerns_to_mention": ["concern 1", "concern 2", "concern 3"]
 }}"""
