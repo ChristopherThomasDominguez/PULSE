@@ -1,0 +1,1033 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PULSE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #D42B2B;
+  --red-dark: #A01E1E;
+  --red-light: #FDF0F0;
+  --red-glow: rgba(212,43,43,0.15);
+  --black: #0D0D0D;
+  --gray-900: #1A1A1A;
+  --gray-800: #2A2A2A;
+  --gray-700: #3A3A3A;
+  --gray-400: #888;
+  --gray-200: #E5E5E5;
+  --gray-100: #F5F5F5;
+  --white: #FFFFFF;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: var(--font-body);
+  background: #111;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px 48px;
+}
+
+/* ── PHONE SHELL ───────────────────────── */
+.phone {
+  width: 390px;
+  min-height: 844px;
+  background: var(--white);
+  border-radius: 48px;
+  overflow: hidden;
+  box-shadow: 0 0 0 10px #1a1a1a, 0 32px 80px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.notch {
+  height: 44px; background: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.notch-pill { width: 120px; height: 22px; background: #000; border-radius: 20px; }
+.status-bar {
+  display: flex; justify-content: space-between;
+  padding: 8px 20px 4px;
+  font-size: 11px; font-weight: 600; color: var(--gray-400);
+  background: var(--white); flex-shrink: 0;
+}
+
+/* ── SCREENS ───────────────────────────── */
+.screen { display:none; flex-direction:column; flex:1; overflow:hidden; }
+.screen.active { display:flex; }
+.scroll { flex:1; overflow-y:auto; scrollbar-width:none; }
+.scroll::-webkit-scrollbar { display:none; }
+
+/* ── SPLASH ────────────────────────────── */
+#s-splash {
+  background: var(--black);
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px 48px;
+  gap: 0;
+}
+.ecg-logo {
+  width: 220px; margin-bottom: 24px;
+  filter: drop-shadow(0 0 12px rgba(212,43,43,0.5));
+}
+.splash-word {
+  font-family: var(--font-display);
+  font-size: 5rem; letter-spacing: 6px;
+  color: var(--white); line-height: 1;
+  margin-bottom: 6px;
+}
+.splash-sub {
+  font-size: 0.78rem; color: var(--gray-400);
+  text-align: center; letter-spacing: 0.08em;
+  text-transform: uppercase; margin-bottom: 40px;
+  line-height: 1.6;
+}
+.splash-feats {
+  width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px;
+}
+.splash-feat {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-sm);
+}
+.feat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+.feat-txt { font-size: 0.84rem; color: rgba(255,255,255,0.75); }
+.btn-splash {
+  width: 100%; padding: 16px;
+  background: var(--red); color: var(--white);
+  border: none; border-radius: var(--radius-sm);
+  font-family: var(--font-display); font-size: 1.4rem;
+  letter-spacing: 2px; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-splash:active { transform: scale(0.98); background: var(--red-dark); }
+.ibm-badge {
+  margin-top: 16px; font-size: 0.68rem;
+  color: rgba(255,255,255,0.2); text-align: center;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* ── SHARED COMPONENTS ─────────────────── */
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 10px; flex-shrink: 0;
+}
+.top-title { font-family: var(--font-display); font-size: 2rem; color: var(--black); letter-spacing: 1px; }
+.api-pill {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--gray-100); border-radius: 20px; padding: 4px 10px;
+  color: var(--gray-400);
+}
+.api-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-400); flex-shrink: 0; }
+.api-dot.on { background: #22C55E; animation: blink 2s infinite; }
+.api-dot.off { background: var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 10px; overflow: hidden;
+}
+.card-hd {
+  padding: 8px 14px; background: var(--gray-100);
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 0.64rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray-400);
+}
+.card-bd { padding: 14px; }
+
+.sec-head {
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gray-400); margin-bottom: 8px; margin-top: 14px;
+}
+
+.badge {
+  font-size: 0.62rem; font-weight: 700; padding: 3px 8px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.b-red { background: var(--red-light); color: var(--red-dark); }
+.b-gray { background: var(--gray-100); color: var(--gray-400); }
+.b-black { background: var(--black); color: var(--white); }
+
+.btn {
+  width: 100%; border: none; border-radius: var(--radius-sm);
+  padding: 14px 20px; font-family: var(--font-body);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform 0.1s, opacity 0.15s;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-red { background: var(--red); color: var(--white); margin-bottom: 8px; }
+.btn-black { background: var(--black); color: var(--white); margin-bottom: 8px; }
+.btn-outline { background: transparent; color: var(--black); border: 1.5px solid var(--gray-200); }
+
+.input-lbl { font-size: 0.74rem; font-weight: 600; color: var(--gray-400); margin-bottom: 5px; display: block; letter-spacing: 0.06em; text-transform: uppercase; }
+.input {
+  width: 100%; background: var(--gray-100); border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-xs); padding: 10px 12px;
+  font-size: 0.88rem; color: var(--black); font-family: var(--font-body);
+  outline: none; transition: border-color 0.15s; margin-bottom: 12px;
+}
+.input:focus { border-color: var(--red); background: var(--white); }
+textarea.input { resize: none; height: 80px; line-height: 1.5; }
+select.input {
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  padding-right: 32px;
+}
+
+/* ── BOTTOM NAV ────────────────────────── */
+.tab-bar {
+  display: flex; background: var(--white);
+  border-top: 1.5px solid var(--gray-200);
+  padding: 8px 0 14px; flex-shrink: 0;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; cursor: pointer;
+}
+.tab-lbl { font-size: 10px; color: var(--gray-400); font-weight: 500; }
+.tab.on .tab-lbl { color: var(--red); font-weight: 600; }
+
+/* ── HOME ──────────────────────────────── */
+.home-hero {
+  background: var(--black); margin: 0 20px 12px;
+  border-radius: var(--radius); padding: 18px;
+  position: relative; overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    90deg, transparent, transparent 40px,
+    rgba(212,43,43,0.03) 40px, rgba(212,43,43,0.03) 41px
+  );
+}
+.hero-eyebrow { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 5px; }
+.hero-name { font-family: var(--font-display); font-size: 1.6rem; color: var(--white); letter-spacing: 1px; margin-bottom: 3px; }
+.hero-sub { font-size: 0.78rem; color: rgba(255,255,255,0.45); margin-bottom: 14px; }
+.hero-pills { display: flex; gap: 7px; flex-wrap: wrap; }
+.hero-pill {
+  background: rgba(212,43,43,0.15); border: 1px solid rgba(212,43,43,0.3);
+  border-radius: 6px; padding: 5px 10px; font-size: 0.72rem; color: rgba(255,255,255,0.7);
+}
+
+.metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px; margin-bottom: 14px; }
+.metric-box { background: var(--gray-100); border-radius: var(--radius-sm); padding: 14px; }
+.m-val { font-family: var(--font-display); font-size: 2.2rem; color: var(--black); line-height: 1; }
+.m-lbl { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gray-400); margin-top: 3px; }
+
+.concern-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 0; border-bottom: 1px solid var(--gray-200);
+}
+.concern-row:last-child { border-bottom: none; }
+.c-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.c-dot-red { background: var(--red); }
+.c-dot-gray { background: var(--gray-400); }
+.c-name { font-size: 0.86rem; font-weight: 500; color: var(--black); }
+.c-meta { font-size: 0.71rem; color: var(--gray-400); margin-top: 2px; }
+
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px; }
+.quick-tile {
+  background: var(--gray-100); border-radius: var(--radius-sm);
+  padding: 16px 12px; text-align: center; cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.quick-tile:hover { border-color: var(--red); background: var(--red-light); }
+.qt-label { font-size: 0.76rem; font-weight: 600; color: var(--black); margin-top: 8px; }
+
+/* ── BODY MAP ──────────────────────────── */
+#s-log { background: var(--white); }
+.body-map-wrap {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 20px 12px; margin-bottom: 8px;
+}
+.body-map-note {
+  font-size: 0.74rem; color: var(--gray-400);
+  text-align: center; margin-bottom: 10px;
+}
+.body-map-svg { width: 200px; cursor: pointer; user-select: none; }
+
+/* SVG body part default + hover + selected */
+.bp { fill: var(--gray-100); stroke: var(--gray-200); stroke-width: 1.5; transition: fill 0.15s, stroke 0.15s; cursor: pointer; }
+.bp:hover { fill: rgba(212,43,43,0.12); stroke: var(--red); }
+.bp.sel { fill: var(--red); stroke: var(--red-dark); }
+
+.selected-area-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--black); border-radius: var(--radius-sm);
+  padding: 10px 14px; margin: 0 20px 14px;
+}
+.sap-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; animation: blink 1.5s infinite; }
+.sap-area { font-size: 0.86rem; font-weight: 600; color: var(--white); flex: 1; }
+.sap-tap { font-size: 0.72rem; color: rgba(255,255,255,0.35); }
+
+.sev-wrap { padding: 0 20px; margin-bottom: 12px; }
+.sev-track {
+  display: flex; align-items: center; gap: 10px;
+}
+.sev-slider {
+  flex: 1; -webkit-appearance: none; height: 5px;
+  background: var(--gray-200); border-radius: 3px; outline: none;
+}
+.sev-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--red); cursor: pointer;
+  border: 3px solid var(--white); box-shadow: 0 0 0 2px var(--red);
+}
+.sev-num { font-family: var(--font-display); font-size: 1.6rem; color: var(--black); min-width: 30px; text-align: center; }
+
+.urg-row { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 14px; }
+.urg-btn {
+  flex: 1; padding: 9px 4px; border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-xs); font-size: 0.78rem; font-weight: 600;
+  text-align: center; cursor: pointer; background: var(--gray-100);
+  color: var(--gray-400); transition: all 0.15s;
+}
+.urg-btn.u-low { background: var(--gray-100); border-color: var(--black); color: var(--black); }
+.urg-btn.u-med { background: #FFF3CD; border-color: #D4A500; color: #7A5E00; }
+.urg-btn.u-high { background: var(--red-light); border-color: var(--red); color: var(--red-dark); }
+
+.notes-wrap { padding: 0 20px; margin-bottom: 12px; }
+.log-fb { display: none; margin: 0 20px 10px; padding: 10px 12px; border-radius: var(--radius-xs); font-size: 0.8rem; }
+.log-actions { padding: 0 20px 28px; }
+
+/* ── DEMO SCREEN ───────────────────────── */
+#s-demo { background: var(--black); }
+#s-demo .status-bar { background: var(--black); color: #555; }
+#s-demo .scroll { padding: 0 20px 40px; }
+
+.demo-hero {
+  background: rgba(212,43,43,0.08);
+  border: 1px solid rgba(212,43,43,0.2);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+}
+.demo-eyebrow { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.demo-title { font-family: var(--font-display); font-size: 1.8rem; color: var(--white); letter-spacing: 1px; margin-bottom: 4px; }
+.demo-sub { font-size: 0.76rem; color: rgba(255,255,255,0.35); line-height: 1.6; }
+.demo-code { font-size: 0.66rem; background: rgba(255,255,255,0.07); padding: 2px 6px; border-radius: 3px; font-family: monospace; color: var(--red); }
+
+.step-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm); margin-bottom: 8px;
+  transition: background 0.3s, border-color 0.3s;
+}
+.step-row.s-done { background: rgba(212,43,43,0.08); border-color: rgba(212,43,43,0.25); }
+.step-row.s-active { background: rgba(212,43,43,0.05); border-color: rgba(212,43,43,0.15); }
+.step-circle {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+.step-row.s-done .step-circle { background: var(--red); color: var(--white); }
+.step-row.s-active .step-circle { background: rgba(212,43,43,0.3); color: var(--red); }
+.step-name { font-size: 0.84rem; font-weight: 600; color: rgba(255,255,255,0.5); margin-bottom: 2px; }
+.step-row.s-done .step-name, .step-row.s-active .step-name { color: rgba(255,255,255,0.9); }
+.step-desc { font-size: 0.7rem; color: rgba(255,255,255,0.25); }
+.step-row.s-done .step-desc, .step-row.s-active .step-desc { color: rgba(255,255,255,0.45); }
+
+.d8-form {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+}
+.d8-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.25); margin-bottom: 12px; }
+.d8-input {
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-xs);
+  padding: 10px 12px; font-size: 0.85rem; color: rgba(255,255,255,0.85);
+  font-family: var(--font-body); outline: none; margin-bottom: 10px;
+  transition: border-color 0.15s;
+}
+.d8-input:focus { border-color: var(--red); }
+.d8-sev { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.d8-sev-lbl { font-size: 0.72rem; color: rgba(255,255,255,0.35); flex-shrink: 0; }
+.d8-sev input[type=range] {
+  flex: 1; -webkit-appearance: none; height: 4px;
+  background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+}
+.d8-sev input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--red); cursor: pointer;
+  border: 2px solid var(--white);
+}
+.d8-sev-val { font-family: var(--font-display); font-size: 1.4rem; color: var(--red); min-width: 24px; text-align: center; }
+.d8-urg {
+  padding: 9px 12px; border: 1.5px solid rgba(212,43,43,0.4);
+  background: rgba(212,43,43,0.1); border-radius: var(--radius-xs);
+  font-size: 0.78rem; font-weight: 700; color: var(--red);
+  text-align: center; text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.fire-btn {
+  width: 100%; padding: 16px;
+  background: var(--red); color: var(--white);
+  border: none; border-radius: var(--radius-sm);
+  font-family: var(--font-display); font-size: 1.4rem;
+  letter-spacing: 2px; cursor: pointer; margin-bottom: 0;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.1s, background 0.15s;
+}
+.fire-btn:active { transform: scale(0.98); }
+.fire-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.fire-btn.firing { background: var(--red-dark); }
+
+.err-box {
+  background: rgba(212,43,43,0.08); border: 1px solid rgba(212,43,43,0.25);
+  border-radius: var(--radius-xs); padding: 12px; font-size: 0.78rem;
+  color: rgba(255,150,150,0.9); margin-top: 10px; display: none; line-height: 1.5;
+}
+.err-box.show { display: block; }
+
+.result-box {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(212,43,43,0.25);
+  border-radius: var(--radius); overflow: hidden; margin-top: 14px; display: none;
+}
+.result-box.show { display: block; }
+.result-hd {
+  background: rgba(212,43,43,0.15); padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.result-hd-title { font-family: var(--font-display); font-size: 1rem; color: var(--white); letter-spacing: 1px; }
+.esc-badge {
+  font-size: 0.66rem; font-weight: 700; padding: 4px 10px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.esc-urgent { background: var(--red); color: var(--white); }
+.esc-see_doctor { background: #D4A500; color: var(--white); }
+.esc-monitor { background: #22C55E; color: var(--white); }
+.result-body { padding: 14px; }
+.r-sec { margin-bottom: 12px; }
+.r-sec-title { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 6px; }
+.r-text { font-size: 0.82rem; color: rgba(255,255,255,0.7); line-height: 1.6; }
+.r-q { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.r-q:last-child { border-bottom: none; }
+.r-qnum {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(212,43,43,0.25); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 700; color: var(--red); flex-shrink: 0; margin-top: 2px;
+}
+.r-qtxt { font-size: 0.8rem; color: rgba(255,255,255,0.65); line-height: 1.5; }
+
+/* dots loader */
+.dots { display:flex; gap:5px; }
+.dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.7); animation:bdot 1.2s infinite; }
+.dot:nth-child(2){animation-delay:0.2s}
+.dot:nth-child(3){animation-delay:0.4s}
+@keyframes bdot { 0%,100%{transform:translateY(0);opacity:0.3} 50%{transform:translateY(-4px);opacity:1} }
+
+/* ── TIMELINE ──────────────────────────── */
+#s-timeline { background: var(--white); }
+
+/* ── DEMO NAV TABS (dark) ──────────────── */
+.tab-bar-dark {
+  display: flex; background: var(--gray-900);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 0 14px; flex-shrink: 0;
+}
+.tab-dark { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.tab-dark .tab-lbl { font-size:10px; color:#555; font-weight:500; }
+.tab-dark.on .tab-lbl { color:var(--red); }
+
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"><div class="notch-pill"></div></div>
+
+  <!-- ═══════════════ SPLASH ═══════════════ -->
+  <div class="screen active" id="s-splash">
+    <!-- ECG + Heart SVG logo recreation -->
+    <svg class="ecg-logo" viewBox="0 0 340 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- ECG line with heart shape in center -->
+      <polyline points="0,60 30,60 40,60 50,30 60,90 70,10 80,90 90,60 110,60" stroke="#D42B2B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- heart -->
+      <path d="M145,45 C145,38 152,32 160,36 C162,37 164,39 165,42 C166,39 168,37 170,36 C178,32 185,38 185,45 C185,52 178,60 165,70 C152,60 145,52 145,45Z" stroke="#D42B2B" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- continue ECG line after heart -->
+      <polyline points="190,60 210,60 220,30 230,90 240,20 250,80 260,60 280,60 310,60 340,60" stroke="#D42B2B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+
+    <div class="splash-word">PULSE</div>
+    <div class="splash-sub">Powered by IBM watsonx<br>Your health, remembered.</div>
+
+    <div class="splash-feats">
+      <div class="splash-feat"><div class="feat-dot"></div><div class="feat-txt">Tap your body to log where it hurts</div></div>
+      <div class="splash-feat"><div class="feat-dot"></div><div class="feat-txt">IBM Granite detects patterns over time</div></div>
+      <div class="splash-feat"><div class="feat-dot"></div><div class="feat-txt">Autonomous agents prep your doctor visit</div></div>
+    </div>
+
+    <button class="btn-splash" onclick="go('home')">GET STARTED</button>
+    <div class="ibm-badge">IBM watsonx Orchestrate · IBM Granite · BIND Team</div>
+  </div>
+
+  <!-- ═══════════════ HOME ═══════════════ -->
+  <div class="screen" id="s-home">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+    <div class="top-bar">
+      <div class="top-title">PULSE</div>
+      <div class="api-pill">
+        <div class="api-dot" id="api-dot"></div>
+        <span id="api-txt">Connecting...</span>
+      </div>
+    </div>
+    <div class="scroll" style="padding:0 20px 28px;">
+      <div class="home-hero">
+        <div class="hero-eyebrow">
+          <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#D42B2B"/></svg>
+          Next Step
+        </div>
+        <div class="hero-name">Alex Johnson</div>
+        <div class="hero-sub">7 days of ankle pain logged — Day 8 ready</div>
+        <div class="hero-pills">
+          <div class="hero-pill" id="concern-pill">— concerns</div>
+          <div class="hero-pill">IBM Granite active</div>
+        </div>
+      </div>
+
+      <div class="metrics-row" style="padding:0;margin-bottom:14px;">
+        <div class="metric-box">
+          <div class="m-val" id="h-count">—</div>
+          <div class="m-lbl">Concerns</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-val" id="h-sev">—</div>
+          <div class="m-lbl">Peak Severity</div>
+        </div>
+      </div>
+
+      <div class="sec-head" style="margin-top:0;">Recent Concerns</div>
+      <div class="card">
+        <div class="card-bd" id="home-list" style="padding:0 14px;">
+          <div style="color:var(--gray-400);font-size:0.8rem;text-align:center;padding:16px 0;">Loading...</div>
+        </div>
+      </div>
+
+      <div class="sec-head">Quick Actions</div>
+      <div class="quick-grid" style="padding:0;">
+        <div class="quick-tile" onclick="go('log')">
+          <svg width="22" height="22" viewBox="0 0 22 22"><path d="M11 4v14M4 11h14" stroke="#D42B2B" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <div class="qt-label">Log Concern</div>
+        </div>
+        <div class="quick-tile" onclick="go('demo')">
+          <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" stroke="#D42B2B" stroke-width="1.5" fill="none"/><path d="M9 8l5 3-5 3V8z" fill="#D42B2B"/></svg>
+          <div class="qt-label">Live Demo</div>
+        </div>
+        <div class="quick-tile" onclick="go('demo')">
+          <svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="3" width="16" height="16" rx="3" stroke="#D42B2B" stroke-width="1.5" fill="none"/><path d="M7 11h8M7 14h5" stroke="#D42B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div class="qt-label">Visit Prep</div>
+        </div>
+        <div class="quick-tile" onclick="go('timeline')">
+          <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" stroke="#D42B2B" stroke-width="1.5" fill="none"/><path d="M11 7v5l3 3" stroke="#D42B2B" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div class="qt-label">Timeline</div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab on" onclick="go('home')">
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10L10 3l7 7" stroke="#D42B2B" stroke-width="1.5" fill="none" stroke-linecap="round"/><rect x="5" y="10" width="10" height="8" rx="1" stroke="#D42B2B" stroke-width="1.5" fill="none"/></svg>
+        <div class="tab-lbl">Home</div>
+      </div>
+      <div class="tab" onclick="go('log')">
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-lbl">Log</div>
+      </div>
+      <div class="tab" onclick="go('demo')">
+        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#888" stroke-width="1.5" fill="none"/><path d="M8 7l5 3-5 3V7z" fill="#888"/></svg>
+        <div class="tab-lbl">Demo</div>
+      </div>
+      <div class="tab" onclick="go('timeline')">
+        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#888" stroke-width="1.5" fill="none"/><path d="M10 7v4l2 2" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="tab-lbl">Timeline</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LOG / BODY MAP ═══════════════ -->
+  <div class="screen" id="s-log">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+    <div class="top-bar" style="padding-bottom:4px;">
+      <div class="top-title">LOG PAIN</div>
+      <div style="font-size:0.7rem;color:var(--gray-400);">Tap the body</div>
+    </div>
+
+    <div class="scroll" style="padding-bottom:28px;">
+      <!-- INTERACTIVE BODY MAP -->
+      <div class="body-map-wrap">
+        <div class="body-map-note">Tap any area to select where it hurts</div>
+
+        <svg class="body-map-svg" viewBox="0 0 200 460" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- HEAD -->
+          <ellipse id="bp-head" class="bp" cx="100" cy="38" rx="28" ry="34" data-label="Head / Neck" onclick="selectBP(this)"/>
+          <!-- NECK -->
+          <rect id="bp-neck" class="bp" x="91" y="70" width="18" height="16" rx="3" data-label="Head / Neck" onclick="selectBP(this)"/>
+
+          <!-- CHEST (left of sternum) -->
+          <path id="bp-chest-l" class="bp" d="M72,88 Q72,86 78,86 L100,86 L100,148 Q80,148 72,140 Z" data-label="Chest (Left)" onclick="selectBP(this)"/>
+          <!-- CHEST (right of sternum) -->
+          <path id="bp-chest-r" class="bp" d="M100,86 L122,86 Q128,86 128,88 L128,140 Q120,148 100,148 Z" data-label="Chest (Right)" onclick="selectBP(this)"/>
+
+          <!-- ABDOMEN -->
+          <rect id="bp-abdomen" class="bp" x="76" y="148" width="48" height="44" rx="6" data-label="Abdomen" onclick="selectBP(this)"/>
+
+          <!-- LEFT SHOULDER -->
+          <ellipse id="bp-shoulder-l" class="bp" cx="58" cy="95" rx="16" ry="14" data-label="Left Shoulder" onclick="selectBP(this)"/>
+          <!-- RIGHT SHOULDER -->
+          <ellipse id="bp-shoulder-r" class="bp" cx="142" cy="95" rx="16" ry="14" data-label="Right Shoulder" onclick="selectBP(this)"/>
+
+          <!-- LEFT UPPER ARM -->
+          <rect id="bp-arm-l" class="bp" x="38" y="106" width="22" height="52" rx="10" data-label="Left Arm" onclick="selectBP(this)"/>
+          <!-- RIGHT UPPER ARM -->
+          <rect id="bp-arm-r" class="bp" x="140" y="106" width="22" height="52" rx="10" data-label="Right Arm" onclick="selectBP(this)"/>
+
+          <!-- LEFT FOREARM -->
+          <rect id="bp-forearm-l" class="bp" x="36" y="162" width="20" height="44" rx="8" data-label="Left Forearm" onclick="selectBP(this)"/>
+          <!-- RIGHT FOREARM -->
+          <rect id="bp-forearm-r" class="bp" x="144" y="162" width="20" height="44" rx="8" data-label="Right Forearm" onclick="selectBP(this)"/>
+
+          <!-- PELVIS -->
+          <rect id="bp-pelvis" class="bp" x="78" y="190" width="44" height="36" rx="8" data-label="Pelvis / Hips" onclick="selectBP(this)"/>
+
+          <!-- LEFT UPPER LEG -->
+          <rect id="bp-thigh-l" class="bp" x="70" y="224" width="28" height="72" rx="12" data-label="Left Thigh" onclick="selectBP(this)"/>
+          <!-- RIGHT UPPER LEG -->
+          <rect id="bp-thigh-r" class="bp" x="102" y="224" width="28" height="72" rx="12" data-label="Right Thigh" onclick="selectBP(this)"/>
+
+          <!-- LEFT KNEE -->
+          <ellipse id="bp-knee-l" class="bp" cx="84" cy="303" rx="14" ry="10" data-label="Left Knee" onclick="selectBP(this)"/>
+          <!-- RIGHT KNEE -->
+          <ellipse id="bp-knee-r" class="bp" cx="116" cy="303" rx="14" ry="10" data-label="Right Knee" onclick="selectBP(this)"/>
+
+          <!-- LEFT SHIN -->
+          <rect id="bp-shin-l" class="bp" x="70" y="312" width="28" height="62" rx="10" data-label="Left Shin" onclick="selectBP(this)"/>
+          <!-- RIGHT SHIN -->
+          <rect id="bp-shin-r" class="bp" x="102" y="312" width="28" height="62" rx="10" data-label="Right Shin" onclick="selectBP(this)"/>
+
+          <!-- LEFT ANKLE -->
+          <ellipse id="bp-ankle-l" class="bp" cx="84" cy="380" rx="14" ry="9" data-label="Left Ankle" onclick="selectBP(this)"/>
+          <!-- RIGHT ANKLE -->
+          <ellipse id="bp-ankle-r" class="bp" cx="116" cy="380" rx="14" ry="9" data-label="Right Ankle" onclick="selectBP(this)"/>
+
+          <!-- LEFT FOOT -->
+          <ellipse id="bp-foot-l" class="bp" cx="80" cy="398" rx="16" ry="9" data-label="Left Foot" onclick="selectBP(this)"/>
+          <!-- RIGHT FOOT -->
+          <ellipse id="bp-foot-r" class="bp" cx="120" cy="398" rx="16" ry="9" data-label="Right Foot" onclick="selectBP(this)"/>
+
+          <!-- BACK labels (small text) -->
+          <text x="100" y="120" text-anchor="middle" font-size="7" fill="#bbb" font-family="DM Sans">BACK</text>
+        </svg>
+      </div>
+
+      <!-- Selected area indicator -->
+      <div class="selected-area-pill" id="area-pill" style="display:none;">
+        <div class="sap-dot"></div>
+        <div class="sap-area" id="area-pill-txt">—</div>
+        <div class="sap-tap">Tap again to deselect</div>
+      </div>
+      <div style="padding:0 20px;margin-bottom:10px;font-size:0.76rem;color:var(--gray-400);display:flex;align-items:center;gap:6px;" id="no-area-msg">
+        <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="#888" stroke-width="1.2" fill="none"/><path d="M6 4v3M6 8.5v.5" stroke="#888" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Select an area on the body above
+      </div>
+
+      <!-- SEVERITY -->
+      <div class="sev-wrap">
+        <label class="input-lbl">Pain Severity</label>
+        <div class="sev-track">
+          <input type="range" class="sev-slider" id="log-sev" min="1" max="10" value="5"
+            oninput="document.getElementById('log-sev-val').textContent=this.value; updateSliderColor(this);">
+          <div class="sev-num" id="log-sev-val">5</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.66rem;color:var(--gray-400);margin-top:4px;">
+          <span>Mild</span><span>Moderate</span><span>Severe</span>
+        </div>
+      </div>
+
+      <!-- URGENCY -->
+      <div style="padding:0 20px;margin-bottom:4px;"><label class="input-lbl">Urgency Level</label></div>
+      <div class="urg-row" id="urg-row">
+        <div class="urg-btn" onclick="setUrg('low',this)">Low</div>
+        <div class="urg-btn u-med" onclick="setUrg('medium',this)">Medium</div>
+        <div class="urg-btn" onclick="setUrg('high',this)">High</div>
+      </div>
+
+      <!-- DESCRIPTION -->
+      <div class="notes-wrap">
+        <label class="input-lbl">Describe the pain</label>
+        <textarea class="input" id="log-symptom" placeholder="e.g. Sharp throbbing, worse when walking..."></textarea>
+        <label class="input-lbl">Additional notes (optional)</label>
+        <textarea class="input" id="log-notes" placeholder="What makes it better or worse?" style="height:60px;"></textarea>
+      </div>
+
+      <div class="log-fb" id="log-fb"></div>
+
+      <div class="log-actions">
+        <button class="btn btn-red" id="log-btn" onclick="submitLog()">
+          <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+          SAVE CONCERN
+        </button>
+        <button class="btn btn-outline" onclick="go('home')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DEMO ═══════════════ -->
+  <div class="screen" id="s-demo">
+    <div class="status-bar"><span>9:41</span><span style="color:#555;">●●●</span></div>
+    <div class="top-bar">
+      <div style="font-family:var(--font-display);font-size:2rem;color:var(--white);letter-spacing:1px;">DEMO</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(212,43,43,0.15);border:1px solid rgba(212,43,43,0.3);border-radius:20px;padding:4px 10px;color:var(--red);">
+        <div style="width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite;"></div>
+        IBM watsonx
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="demo-hero">
+        <div class="demo-eyebrow">
+          <div style="width:6px;height:6px;border-radius:50%;background:var(--red);animation:blink 1.5s infinite;"></div>
+          Live Agent Chain
+        </div>
+        <div class="demo-title">3 AGENTS FIRE</div>
+        <div class="demo-sub">Day 8 entry → <span class="demo-code">POST /api/run-agent-chain</span> → escalation decision + visit prep generated autonomously</div>
+      </div>
+
+      <div class="step-row" id="step1"><div class="step-circle" id="sn1">1</div><div><div class="step-name">Check-in Agent</div><div class="step-desc">Logs Day 8 entry — body area, severity, urgency</div></div></div>
+      <div class="step-row" id="step2"><div class="step-circle" id="sn2">2</div><div><div class="step-name">Pattern Detection Agent</div><div class="step-desc">IBM Granite reads 8-day history, finds escalation</div></div></div>
+      <div class="step-row" id="step3"><div class="step-circle" id="sn3">3</div><div><div class="step-name">Visit Prep Agent</div><div class="step-desc">Generates doctor questions + escalation decision</div></div></div>
+
+      <div style="height:14px;"></div>
+
+      <div class="d8-form">
+        <div class="d8-label">Day 8 — Live Entry</div>
+        <input class="d8-input" id="d8-area" value="Left Ankle" placeholder="Body area"/>
+        <input class="d8-input" id="d8-symptom" value="Cannot walk normally. Severe arch pain and ankle swelling." placeholder="Symptom"/>
+        <div class="d8-sev">
+          <div class="d8-sev-lbl">Severity</div>
+          <input type="range" min="1" max="10" value="8" id="d8-sev" oninput="document.getElementById('d8-sev-val').textContent=this.value">
+          <div class="d8-sev-val" id="d8-sev-val">8</div>
+        </div>
+        <div class="d8-urg">⚠ HIGH URGENCY</div>
+      </div>
+
+      <button class="fire-btn" id="fire-btn" onclick="fireChain()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2v14M2 9h14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+        FIRE ALL 3 AGENTS
+      </button>
+
+      <div class="err-box" id="demo-err"></div>
+
+      <div class="result-box" id="demo-result">
+        <div class="result-hd">
+          <div class="result-hd-title">CHAIN COMPLETE</div>
+          <div class="esc-badge" id="esc-badge">—</div>
+        </div>
+        <div class="result-body">
+          <div class="r-sec"><div class="r-sec-title">Pattern Summary</div><div class="r-text" id="r-pattern"></div></div>
+          <div class="r-sec"><div class="r-sec-title">Escalation Reason</div><div class="r-text" id="r-reason"></div></div>
+          <div class="r-sec"><div class="r-sec-title">Concern Summary</div><div class="r-text" id="r-summary"></div></div>
+          <div class="r-sec"><div class="r-sec-title">Questions for Your Doctor</div><div id="r-qs"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar-dark">
+      <div class="tab-dark" onclick="go('home')"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10L10 3l7 7" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round"/><rect x="5" y="10" width="10" height="8" rx="1" stroke="#555" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">Home</div></div>
+      <div class="tab-dark" onclick="go('log')"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">Log</div></div>
+      <div class="tab-dark on"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#D42B2B" stroke-width="1.5" fill="none"/><path d="M8 7l5 3-5 3V7z" fill="#D42B2B"/></svg><div class="tab-lbl">Demo</div></div>
+      <div class="tab-dark" onclick="go('timeline')"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#555" stroke-width="1.5" fill="none"/><path d="M10 7v4l2 2" stroke="#555" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">Timeline</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TIMELINE ═══════════════ -->
+  <div class="screen" id="s-timeline">
+    <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+    <div class="top-bar">
+      <div class="top-title">TIMELINE</div>
+    </div>
+    <div class="scroll" style="padding:0 20px 28px;">
+      <div id="tl-list">
+        <div style="color:var(--gray-400);font-size:0.82rem;text-align:center;padding:20px;">Loading...</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab" onclick="go('home')"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 10L10 3l7 7" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/><rect x="5" y="10" width="10" height="8" rx="1" stroke="#888" stroke-width="1.5" fill="none"/></svg><div class="tab-lbl">Home</div></div>
+      <div class="tab" onclick="go('log')"><svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" stroke="#888" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">Log</div></div>
+      <div class="tab" onclick="go('demo')"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#888" stroke-width="1.5" fill="none"/><path d="M8 7l5 3-5 3V7z" fill="#888"/></svg><div class="tab-lbl">Demo</div></div>
+      <div class="tab on"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="#D42B2B" stroke-width="1.5" fill="none"/><path d="M10 7v4l2 2" stroke="#D42B2B" stroke-width="1.5" stroke-linecap="round"/></svg><div class="tab-lbl">Timeline</div></div>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+const API = 'http://localhost:8000/api';
+let selArea = '';
+let urgency = 'medium';
+
+// ── NAV ────────────────────────────────────────────
+function go(s) {
+  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  if (s==='home') loadHome();
+  if (s==='timeline') loadTimeline();
+}
+
+// ── BODY MAP ───────────────────────────────────────
+function selectBP(el) {
+  const area = el.getAttribute('data-label');
+  // Deselect all with same label first
+  document.querySelectorAll('.bp.sel').forEach(b => {
+    if (b.getAttribute('data-label') === area) b.classList.remove('sel');
+  });
+  if (selArea === area) {
+    // toggle off
+    selArea = '';
+    document.getElementById('area-pill').style.display = 'none';
+    document.getElementById('no-area-msg').style.display = 'flex';
+    return;
+  }
+  // deselect all, select new
+  document.querySelectorAll('.bp.sel').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  selArea = area;
+  // highlight all parts with same label
+  document.querySelectorAll('.bp').forEach(b => {
+    if (b.getAttribute('data-label') === area) b.classList.add('sel');
+  });
+  document.getElementById('area-pill-txt').textContent = area;
+  document.getElementById('area-pill').style.display = 'flex';
+  document.getElementById('no-area-msg').style.display = 'none';
+}
+
+function updateSliderColor(el) {
+  const v = el.value;
+  const color = v >= 8 ? '#D42B2B' : v >= 5 ? '#D4A500' : '#888';
+  el.style.setProperty('--thumb-color', color);
+}
+
+// ── URGENCY ────────────────────────────────────────
+function setUrg(level, el) {
+  urgency = level;
+  document.querySelectorAll('#urg-row .urg-btn').forEach(b => b.className = 'urg-btn');
+  const map = {low:'u-low', medium:'u-med', high:'u-high'};
+  el.className = 'urg-btn ' + map[level];
+}
+
+// ── API HEALTH ─────────────────────────────────────
+async function checkHealth() {
+  const dot = document.getElementById('api-dot');
+  const txt = document.getElementById('api-txt');
+  try {
+    const r = await fetch(API+'/health', {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    dot.className = 'api-dot on';
+    txt.textContent = d.granite_ready ? 'Granite live' : 'Mock mode';
+  } catch {
+    dot.className = 'api-dot off';
+    txt.textContent = 'API offline';
+  }
+}
+
+// ── HOME DATA ──────────────────────────────────────
+async function loadHome() {
+  try {
+    const r = await fetch(API+'/concerns');
+    const d = await r.json();
+    const cs = d.concerns || [];
+    document.getElementById('h-count').textContent = cs.length;
+    const mx = cs.length ? Math.max(...cs.map(c=>c.severity||0)) : 0;
+    document.getElementById('h-sev').textContent = mx+'/10';
+    document.getElementById('concern-pill').textContent = cs.length+' concerns logged';
+    const list = document.getElementById('home-list');
+    if (!cs.length) { list.innerHTML='<div style="padding:16px 0;text-align:center;color:var(--gray-400);font-size:0.82rem;">No concerns yet. Tap Log Concern.</div>'; return; }
+    list.innerHTML = cs.slice(-4).reverse().map(c => {
+      const high = c.urgency_level==='high';
+      return `<div class="concern-row">
+        <div class="c-dot ${high?'c-dot-red':'c-dot-gray'}"></div>
+        <div style="flex:1">
+          <div class="c-name">${c.symptom||'No description'}</div>
+          <div class="c-meta">${c.body_area||''} · ${c.date_logged||'Today'} · Sev ${c.severity}/10</div>
+        </div>
+        <span class="badge ${high?'b-red':'b-gray'}">${c.urgency_level||'low'}</span>
+      </div>`;
+    }).join('');
+  } catch {
+    document.getElementById('home-list').innerHTML='<div style="padding:12px 0;text-align:center;color:var(--gray-400);font-size:0.8rem;">Server offline</div>';
+  }
+}
+
+// ── LOG SUBMIT ─────────────────────────────────────
+async function submitLog() {
+  const btn = document.getElementById('log-btn');
+  const fb = document.getElementById('log-fb');
+  const symptom = document.getElementById('log-symptom').value.trim();
+  const sev = parseInt(document.getElementById('log-sev').value);
+  const notes = document.getElementById('log-notes').value.trim();
+
+  if (!selArea) {
+    fb.style.display='block'; fb.style.background='var(--red-light)'; fb.style.color='var(--red-dark)';
+    fb.textContent='Please tap a body area first.'; return;
+  }
+  if (!symptom) {
+    fb.style.display='block'; fb.style.background='var(--red-light)'; fb.style.color='var(--red-dark)';
+    fb.textContent='Please describe your pain.'; return;
+  }
+
+  btn.disabled=true;
+  btn.innerHTML='<div class="dots" style="gap:5px;display:flex;"><div class="dot" style="background:#fff;"></div><div class="dot" style="background:#fff;"></div><div class="dot" style="background:#fff;"></div></div>';
+
+  try {
+    const r = await fetch(API+'/log-concern', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ body_area:selArea, symptom, urgency_level:urgency, severity:sev, notes, language:'en' })
+    });
+    const d = await r.json();
+    fb.style.display='block'; fb.style.background='#F0FFF4'; fb.style.color='#166534';
+    fb.textContent=`✓ Saved! You have ${d.total_concerns} concerns logged.`;
+    document.getElementById('log-symptom').value='';
+    document.getElementById('log-notes').value='';
+    document.querySelectorAll('.bp.sel').forEach(b=>b.classList.remove('sel'));
+    selArea=''; document.getElementById('area-pill').style.display='none'; document.getElementById('no-area-msg').style.display='flex';
+    setTimeout(()=>go('home'), 1200);
+  } catch {
+    fb.style.display='block'; fb.style.background='var(--red-light)'; fb.style.color='var(--red-dark)';
+    fb.textContent='Could not save — is python run.py running?';
+  }
+  btn.disabled=false;
+  btn.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg> SAVE CONCERN';
+}
+
+// ── AGENT CHAIN ────────────────────────────────────
+async function fireChain() {
+  const btn = document.getElementById('fire-btn');
+  const err = document.getElementById('demo-err');
+  const res = document.getElementById('demo-result');
+  err.className='err-box'; res.className='result-box';
+
+  ['step1','step2','step3'].forEach(id => document.getElementById(id).className='step-row');
+
+  btn.disabled=true; btn.classList.add('firing');
+  btn.innerHTML='<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div> RUNNING AGENTS...';
+
+  const area = document.getElementById('d8-area').value;
+  const symptom = document.getElementById('d8-symptom').value;
+  const sev = parseInt(document.getElementById('d8-sev').value);
+
+  // Animate steps
+  setTimeout(()=>document.getElementById('step1').className='step-row s-active', 0);
+  setTimeout(()=>document.getElementById('step1').className='step-row s-done', 800);
+  setTimeout(()=>document.getElementById('step2').className='step-row s-active', 850);
+  setTimeout(()=>document.getElementById('step2').className='step-row s-done', 1800);
+  setTimeout(()=>document.getElementById('step3').className='step-row s-active', 1850);
+
+  try {
+    const r = await fetch(API+'/run-agent-chain', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ body_area:area, symptom, urgency_level:'high', severity:sev, notes:'Day 8 live demo', language:'en' })
+    });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+
+    setTimeout(()=>{
+      document.getElementById('step3').className='step-row s-done';
+      renderResult(data);
+      btn.disabled=false; btn.classList.remove('firing');
+      btn.innerHTML='<svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2v14M2 9h14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg> RUN AGAIN';
+    }, 2400);
+
+  } catch(e) {
+    setTimeout(()=>{
+      err.className='err-box show';
+      err.innerHTML=`<strong>API unreachable.</strong> Run: <code>python run.py</code><br><br>${e.message}`;
+      btn.disabled=false; btn.classList.remove('firing');
+      btn.innerHTML='RETRY — FIRE ALL 3 AGENTS';
+    }, 600);
+  }
+}
+
+function renderResult(data) {
+  const prep = data.step3_visit_prep || {};
+  const pat = data.step2_pattern || {};
+  const esc = prep.escalation_decision || pat.escalation_level || 'monitor';
+  const badge = document.getElementById('esc-badge');
+  badge.textContent = esc.replace('_',' ').toUpperCase();
+  badge.className = 'esc-badge esc-'+esc;
+  document.getElementById('r-pattern').textContent = pat.pattern_summary||'Pattern analyzed.';
+  document.getElementById('r-reason').textContent = prep.escalation_reason||'Based on severity trend.';
+  document.getElementById('r-summary').textContent = prep.concern_summary||'Patient logged escalating symptoms.';
+  const qs = prep.suggested_questions||[];
+  document.getElementById('r-qs').innerHTML = qs.map((q,i)=>
+    `<div class="r-q"><div class="r-qnum">${i+1}</div><div class="r-qtxt">${q}</div></div>`
+  ).join('') || '<div class="r-qtxt" style="color:rgba(255,255,255,0.3);padding:8px 0;">No questions generated.</div>';
+  document.getElementById('demo-result').className='result-box show';
+}
+
+// ── TIMELINE ───────────────────────────────────────
+async function loadTimeline() {
+  const list = document.getElementById('tl-list');
+  try {
+    const r = await fetch(API+'/concerns');
+    const d = await r.json();
+    const cs = (d.concerns||[]).slice().reverse();
+    if (!cs.length) { list.innerHTML='<div style="text-align:center;padding:30px;color:var(--gray-400);">No entries yet.</div>'; return; }
+    list.innerHTML = `<div style="position:relative;padding-left:26px;padding-top:4px;">
+      <div style="position:absolute;left:8px;top:16px;bottom:0;width:2px;background:var(--gray-200);"></div>
+      ${cs.map(c => {
+        const hi = c.urgency_level==='high';
+        return `<div style="position:relative;margin-bottom:10px;">
+          <div style="position:absolute;left:-21px;top:14px;width:10px;height:10px;border-radius:50%;background:${hi?'var(--red)':'var(--gray-400)'};border:2px solid var(--white);"></div>
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-bd" style="padding:11px 14px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;">
+                <div style="font-size:0.84rem;font-weight:500;color:var(--black);flex:1;margin-right:8px;">${c.symptom}</div>
+                <span style="font-size:0.68rem;color:var(--gray-400);white-space:nowrap;">${c.date_logged||''}</span>
+              </div>
+              <div style="font-size:0.71rem;color:var(--gray-400);">${c.body_area} · Severity ${c.severity}/10</div>
+              ${c.notes?`<div style="font-size:0.7rem;color:var(--gray-400);margin-top:3px;font-style:italic;">${c.notes}</div>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch {
+    list.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray-400);">Server offline.</div>';
+  }
+}
+
+// ── INIT ───────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{
+  checkHealth();
+  setInterval(checkHealth, 10000);
+});
+</script>
+</body>
+</html>

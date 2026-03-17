@@ -1,30 +1,35 @@
 {
   "expo": {
     "name": "PULSE",
-    "slug": "pulse",
+    "slug": "pulse-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "pulse",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#0D2E1F"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D0D0D"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bind.pulse"
+      "bundleIdentifier": "com.teambind.pulse"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0D2E1F"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D0D0D"
       },
-      "package": "com.bind.pulse"
+      "package": "com.teambind.pulse"
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-font"
-    ]
+    ],
+    "scheme": "pulse"
   }
 }
