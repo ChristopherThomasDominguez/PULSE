@@ -33,5 +33,5 @@ export const Fonts = {
   sans:       'DMSans_400Regular',
   sansLight:  'DMSans_300Light',
   sansMedium: 'DMSans_500Medium',
-  sansBold:   'DMSans_600SemiBold',
+  sansSemiBold: 'DMSans_600SemiBold',
 };
