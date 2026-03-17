@@ -3,11 +3,21 @@ import {
   View, Text, ScrollView, Pressable, TextInput,
   StyleSheet, StatusBar, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, FONTS } from '../../constants/colors';
 import { API_BASE } from '../../constants/api';
 import BodyMap from '../../components/BodyMap';
+
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function isToday(date) {
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
 
 const URGENCIES = [
   { key: 'low',    label: 'Low',    bg: C.gray100,   border: C.black,   text: C.black },
@@ -55,6 +65,8 @@ export default function LogScreen() {
   const [notes, setNotes]               = useState('');
   const [saving, setSaving]             = useState(false);
   const [feedback, setFeedback]         = useState(null);
+  const [symptomDate, setSymptomDate]   = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   async function submit() {
     if (!selectedArea) {
@@ -77,6 +89,7 @@ export default function LogScreen() {
           urgency_level: urgency,
           severity,
           notes: notes.trim(),
+          symptom_date: symptomDate.toISOString().split('T')[0],
           language: 'en',
         }),
       });
@@ -87,6 +100,7 @@ export default function LogScreen() {
       setNotes('');
       setSeverity(5);
       setUrgency('medium');
+      setSymptomDate(new Date());
       setTimeout(() => router.push('/(tabs)'), 1200);
     } catch {
       setFeedback({ type: 'err', msg: 'Could not save — is the server running?' });
@@ -129,6 +143,45 @@ export default function LogScreen() {
         ) : (
           <Text style={styles.noAreaMsg}>ⓘ  Select an area on the body above</Text>
         )}
+
+        {/* Date of symptom */}
+        <View style={styles.section}>
+          <Text style={styles.label}>When did this start?</Text>
+          <Pressable style={styles.datePill} onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.dateIcon}>📅</Text>
+            <View style={styles.dateTextWrap}>
+              <Text style={styles.dateValue}>
+                {isToday(symptomDate) ? 'Today' : formatDate(symptomDate)}
+              </Text>
+              {!isToday(symptomDate) && (
+                <Text style={styles.dateSubtext}>{formatDate(symptomDate)}</Text>
+              )}
+            </View>
+            <Text style={styles.dateChange}>Change</Text>
+          </Pressable>
+          <Text style={styles.ibmHint}>⬡ IBM Granite uses this date for pattern analysis</Text>
+          {showDatePicker && (
+            <>
+              {Platform.OS === 'ios' && (
+                <View style={styles.datePickerBar}>
+                  <Pressable onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.datePickerDone}>Done</Text>
+                  </Pressable>
+                </View>
+              )}
+              <DateTimePicker
+                value={symptomDate}
+                mode="date"
+                maximumDate={new Date()}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selected) => {
+                  if (selected) setSymptomDate(selected);
+                  if (Platform.OS === 'android') setShowDatePicker(false);
+                }}
+              />
+            </>
+          )}
+        </View>
 
         {/* Severity */}
         <View style={styles.section}>
@@ -230,6 +283,16 @@ const styles = StyleSheet.create({
   urgRow:    { flexDirection: 'row', gap: 8 },
   urgBtn:    { flex: 1, paddingVertical: 9, borderWidth: 1.5, borderColor: C.gray200, borderRadius: 5, alignItems: 'center', backgroundColor: C.gray100 },
   urgTxt:    { fontSize: 13, color: C.gray400, fontFamily: FONTS.body },
+
+  datePill:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.gray100, borderWidth: 1.5, borderColor: C.gray200, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12 },
+  dateIcon:     { fontSize: 18 },
+  dateTextWrap: { flex: 1 },
+  dateValue:    { fontSize: 15, fontFamily: FONTS.bodySemi, color: C.black },
+  dateSubtext:  { fontSize: 11, color: C.gray400, fontFamily: FONTS.body, marginTop: 1 },
+  dateChange:   { fontSize: 12, color: C.red, fontFamily: FONTS.bodySemi },
+  ibmHint:      { fontSize: 11, color: C.gray400, fontFamily: FONTS.body, marginTop: 6, letterSpacing: 0.2 },
+  datePickerBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 8 },
+  datePickerDone: { fontSize: 15, color: C.red, fontFamily: FONTS.bodySemi },
 
   input:     { backgroundColor: C.gray100, borderWidth: 1.5, borderColor: C.gray200, borderRadius: 5, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: C.black, fontFamily: FONTS.body, height: 80, textAlignVertical: 'top' },
 

@@ -5,11 +5,64 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Line } from 'react-native-svg';
 import { C, FONTS } from '../../constants/colors';
 import { API_BASE } from '../../constants/api';
 
-function QuickTile({ label, icon, onPress }) {
+// ─── Granite hero state ───────────────────────────────────────────────────────
+function getGraniteState(count, peakSev, apiStatus) {
+  if (apiStatus === 'offline') {
+    return {
+      eyebrow: 'IBM GRANITE · OFFLINE',
+      headline: 'Connect to activate\npattern analysis',
+      sub: 'Start the backend server to enable AI-powered health tracking.',
+      pillA: 'Server offline',
+      pillB: null,
+      accent: C.gray400,
+    };
+  }
+  if (count === 0) {
+    return {
+      eyebrow: 'IBM GRANITE · READY',
+      headline: 'Log your first\nconcern to begin',
+      sub: 'IBM Granite will analyze patterns across your entries over time.',
+      pillA: 'Awaiting first entry',
+      pillB: 'IBM Granite active',
+      accent: C.red,
+    };
+  }
+  if (count < 3) {
+    return {
+      eyebrow: 'IBM GRANITE · LEARNING',
+      headline: `${count} entr${count === 1 ? 'y' : 'ies'} logged`,
+      sub: 'IBM Granite is building your health history. Log a few more to enable pattern detection.',
+      pillA: `${count} concern${count !== 1 ? 's' : ''} logged`,
+      pillB: 'Pattern detection pending',
+      accent: '#F59E0B',
+    };
+  }
+  if (peakSev >= 7) {
+    return {
+      eyebrow: 'IBM GRANITE · ALERT',
+      headline: 'Escalation pattern\ndetected',
+      sub: `Peak severity ${peakSev}/10 across ${count} entries. IBM Granite recommends visit prep.`,
+      pillA: `${count} concerns · Peak ${peakSev}/10`,
+      pillB: 'Visit prep recommended',
+      accent: C.red,
+    };
+  }
+  return {
+    eyebrow: 'IBM GRANITE · MONITORING',
+    headline: `${count} concerns\nunder analysis`,
+    sub: `IBM Granite is tracking your health history. Peak severity ${peakSev}/10.`,
+    pillA: `${count} concerns logged`,
+    pillB: 'No escalation detected',
+    accent: '#22C55E',
+  };
+}
+
+// ─── Quick action tile ────────────────────────────────────────────────────────
+function QuickTile({ label, sublabel, icon, onPress }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.quickTile, pressed && styles.quickTilePressed]}
@@ -17,16 +70,18 @@ function QuickTile({ label, icon, onPress }) {
     >
       {icon}
       <Text style={styles.quickLabel}>{label}</Text>
+      {sublabel ? <Text style={styles.quickSub}>{sublabel}</Text> : null}
     </Pressable>
   );
 }
 
+// ─── Home screen ─────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [apiStatus, setApiStatus] = useState('connecting');
-  const [concerns, setConcerns] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [concerns, setConcerns]   = useState([]);
+  const [loading, setLoading]     = useState(true);
 
   async function checkHealth() {
     try {
@@ -67,13 +122,16 @@ export default function HomeScreen() {
   const peakSev = count ? Math.max(...concerns.map(c => c.severity || 0)) : 0;
   const recent  = concerns.slice(-4).reverse();
 
-  const dotColor =
-    apiStatus === 'offline'    ? C.red :
+  const granite  = getGraniteState(count, peakSev, apiStatus);
+
+  // IBM Granite badge in top bar
+  const ibmDotColor =
+    apiStatus === 'offline'    ? C.gray400 :
     apiStatus === 'connecting' ? C.gray400 : '#22C55E';
-  const dotLabel =
-    apiStatus === 'offline'    ? 'API offline' :
-    apiStatus === 'connecting' ? 'Connecting…' :
-    apiStatus === 'granite'    ? 'Granite live' : 'Mock mode';
+  const ibmLabel =
+    apiStatus === 'connecting' ? 'IBM Granite · Connecting' :
+    apiStatus === 'offline'    ? 'IBM Granite · Offline' :
+    apiStatus === 'granite'    ? 'IBM Granite · Live' : 'IBM Granite · Mock';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -82,9 +140,9 @@ export default function HomeScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <Text style={styles.topTitle}>PULSE</Text>
-        <View style={styles.apiPill}>
-          <View style={[styles.apiDot, { backgroundColor: dotColor }]} />
-          <Text style={styles.apiTxt}>{dotLabel}</Text>
+        <View style={styles.ibmPill}>
+          <View style={[styles.ibmDot, { backgroundColor: ibmDotColor }]} />
+          <Text style={styles.ibmTxt}>{ibmLabel}</Text>
         </View>
       </View>
 
@@ -93,21 +151,20 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       >
-        {/* Hero card */}
+        {/* Hero — IBM Granite dynamic state */}
         <View style={styles.hero}>
-          <Text style={styles.heroEye}>● Next Step</Text>
-          <Text style={styles.heroName}>Alex Johnson</Text>
-          <Text style={styles.heroSub}>
-            {count} concern{count !== 1 ? 's' : ''} logged
-            {count > 0 ? ` · Peak severity ${peakSev}/10` : ''}
-          </Text>
+          <Text style={[styles.heroEye, { color: granite.accent }]}>{granite.eyebrow}</Text>
+          <Text style={styles.heroHeadline}>{granite.headline}</Text>
+          <Text style={styles.heroSub}>{granite.sub}</Text>
           <View style={styles.heroPills}>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillTxt}>{count} concerns logged</Text>
+            <View style={[styles.heroPill, { borderColor: granite.accent + '55' }]}>
+              <Text style={styles.heroPillTxt}>{granite.pillA}</Text>
             </View>
-            <View style={styles.heroPill}>
-              <Text style={styles.heroPillTxt}>IBM Granite active</Text>
-            </View>
+            {granite.pillB && (
+              <View style={[styles.heroPill, { borderColor: granite.accent + '55' }]}>
+                <Text style={styles.heroPillTxt}>{granite.pillB}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -129,10 +186,16 @@ export default function HomeScreen() {
           {loading ? (
             <ActivityIndicator color={C.red} style={{ padding: 20 }} />
           ) : recent.length === 0 ? (
-            <Text style={styles.emptyTxt}>No concerns yet. Tap Log Concern.</Text>
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyTitle}>No concerns logged yet</Text>
+              <Text style={styles.emptyBody}>
+                Tap "Log Concern" below to start. IBM Granite will begin pattern analysis after your first entry.
+              </Text>
+            </View>
           ) : (
             recent.map((c, i) => {
               const high = c.urgency_level === 'high';
+              const dateDisplay = c.symptom_date || c.date_logged || 'Today';
               return (
                 <Pressable
                   key={c.id || i}
@@ -149,7 +212,7 @@ export default function HomeScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cName} numberOfLines={1}>{c.symptom || 'No description'}</Text>
                     <Text style={styles.cMeta}>
-                      {c.body_area} · {c.date_logged || 'Today'} · Sev {c.severity}/10
+                      {c.body_area} · {dateDisplay} · Sev {c.severity}/10
                     </Text>
                   </View>
                   <View style={[styles.badge, { backgroundColor: high ? '#FDF0F0' : C.gray100 }]}>
@@ -168,6 +231,7 @@ export default function HomeScreen() {
         <View style={styles.quickGrid}>
           <QuickTile
             label="Log Concern"
+            sublabel="Body tap + AI logging"
             onPress={() => router.push('/(tabs)/log')}
             icon={
               <Svg width={22} height={22} viewBox="0 0 22 22">
@@ -176,17 +240,8 @@ export default function HomeScreen() {
             }
           />
           <QuickTile
-            label="Live Demo"
-            onPress={() => router.push('/(tabs)/demo')}
-            icon={
-              <Svg width={22} height={22} viewBox="0 0 22 22">
-                <Circle cx={11} cy={11} r={8} stroke={C.red} strokeWidth={1.5} fill="none" />
-                <Path d="M9 8l5 3-5 3V8z" fill={C.red} />
-              </Svg>
-            }
-          />
-          <QuickTile
             label="Visit Prep"
+            sublabel="IBM Granite · pre-visit"
             onPress={() => router.push('/(tabs)/demo')}
             icon={
               <Svg width={22} height={22} viewBox="0 0 22 22">
@@ -196,8 +251,20 @@ export default function HomeScreen() {
             }
           />
           <QuickTile
+            label="After Visit"
+            sublabel="Upload doctor notes"
+            onPress={() => router.push('/doctor-notes')}
+            icon={
+              <Svg width={22} height={22} viewBox="0 0 22 22">
+                <Path d="M6 3h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" stroke={C.red} strokeWidth={1.5} fill="none" />
+                <Path d="M11 8v6M8 11l3-3 3 3" stroke={C.red} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            }
+          />
+          <QuickTile
             label="Timeline"
-            onPress={() => router.push('/(tabs)/timeline')}
+            sublabel="Your health history"
+            onPress={() => router.push('/(tabs)/edit-concern')}
             icon={
               <Svg width={22} height={22} viewBox="0 0 22 22">
                 <Circle cx={11} cy={11} r={8} stroke={C.red} strokeWidth={1.5} fill="none" />
@@ -206,6 +273,11 @@ export default function HomeScreen() {
             }
           />
         </View>
+
+        {/* IBM attribution footer */}
+        <Text style={styles.ibmFooter}>
+          Powered by IBM WatsonX Orchestrate · IBM Granite
+        </Text>
       </ScrollView>
     </View>
   );
@@ -215,18 +287,18 @@ const styles = StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.white },
   topBar:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
   topTitle:     { fontFamily: FONTS.display, fontSize: 32, color: C.black, letterSpacing: 1 },
-  apiPill:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.gray100, borderRadius: 20, paddingVertical: 4, paddingHorizontal: 10 },
-  apiDot:       { width: 6, height: 6, borderRadius: 3 },
-  apiTxt:       { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: C.gray400, fontFamily: FONTS.bodySemi },
+  ibmPill:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.gray100, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 11, borderWidth: 1, borderColor: C.gray200 },
+  ibmDot:       { width: 6, height: 6, borderRadius: 3 },
+  ibmTxt:       { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, color: C.gray400, fontFamily: FONTS.bodySemi },
   scroll:       { flex: 1, paddingHorizontal: 20 },
 
   hero:         { backgroundColor: C.black, borderRadius: 14, padding: 18, marginBottom: 12 },
-  heroEye:      { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.red, marginBottom: 5, fontFamily: FONTS.bodySemi },
-  heroName:     { fontFamily: FONTS.display, fontSize: 26, color: C.white, letterSpacing: 1, marginBottom: 3 },
-  heroSub:      { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 14, fontFamily: FONTS.body },
+  heroEye:      { fontSize: 10, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8, fontFamily: FONTS.bodySemi },
+  heroHeadline: { fontFamily: FONTS.display, fontSize: 30, color: C.white, letterSpacing: 0.5, marginBottom: 8, lineHeight: 34 },
+  heroSub:      { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 14, fontFamily: FONTS.body, lineHeight: 18 },
   heroPills:    { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
-  heroPill:     { backgroundColor: 'rgba(212,43,43,0.15)', borderWidth: 1, borderColor: 'rgba(212,43,43,0.3)', borderRadius: 6, paddingVertical: 5, paddingHorizontal: 10 },
-  heroPillTxt:  { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: FONTS.body },
+  heroPill:     { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderRadius: 6, paddingVertical: 5, paddingHorizontal: 10 },
+  heroPillTxt:  { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontFamily: FONTS.body },
 
   metricsRow:   { flexDirection: 'row', gap: 10, marginBottom: 14 },
   metricBox:    { flex: 1, backgroundColor: C.gray100, borderRadius: 8, padding: 14 },
@@ -235,7 +307,11 @@ const styles = StyleSheet.create({
 
   sectionHead:  { fontSize: 11, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase', color: C.gray400, marginBottom: 8, marginTop: 14, fontFamily: FONTS.bodySemi },
   card:         { backgroundColor: C.white, borderRadius: 14, borderWidth: 1, borderColor: C.gray200, marginBottom: 10 },
-  emptyTxt:     { color: C.gray400, fontSize: 13, textAlign: 'center', padding: 16, fontFamily: FONTS.body },
+
+  emptyWrap:    { padding: 20, alignItems: 'center' },
+  emptyTitle:   { fontSize: 14, fontFamily: FONTS.bodySemi, color: C.black, marginBottom: 6 },
+  emptyBody:    { fontSize: 13, color: C.gray400, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 19 },
+
   concernRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: C.gray200 },
   cDot:         { width: 8, height: 8, borderRadius: 4, marginTop: 5 },
   cName:        { fontSize: 14, fontWeight: '500', color: C.black, fontFamily: FONTS.bodyMedium },
@@ -244,7 +320,10 @@ const styles = StyleSheet.create({
   badgeTxt:     { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONTS.bodySemi },
 
   quickGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  quickTile:    { width: '48%', backgroundColor: C.gray100, borderRadius: 8, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  quickTile:    { width: '48%', backgroundColor: C.gray100, borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
   quickTilePressed: { borderColor: C.red, backgroundColor: '#FDF0F0' },
   quickLabel:   { fontSize: 13, fontWeight: '600', color: C.black, marginTop: 8, fontFamily: FONTS.bodySemi },
+  quickSub:     { fontSize: 10, color: C.gray400, marginTop: 2, fontFamily: FONTS.body, textAlign: 'center' },
+
+  ibmFooter:    { fontSize: 10, color: C.gray400, fontFamily: FONTS.body, textAlign: 'center', marginTop: 20, letterSpacing: 0.5 },
 });

@@ -1,284 +1,321 @@
-/**
- * edit-concern.js
- * Tap any concern from the home screen to edit or delete it.
- * Receives `concern` as a JSON string in route params.
- */
-
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput,
-  StyleSheet, StatusBar, Alert, KeyboardAvoidingView, Platform,
+  View, Text, ScrollView, Pressable,
+  StyleSheet, StatusBar, ActivityIndicator, Alert,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { C, FONTS } from '../../constants/colors';
 import { API_BASE } from '../../constants/api';
 
-const URGENCIES = [
-  { key: 'low',    label: 'Low',    bg: C.gray100, border: C.black,   text: C.black },
-  { key: 'medium', label: 'Medium', bg: '#FFF3CD', border: '#D4A500', text: '#7A5E00' },
-  { key: 'high',   label: 'High',   bg: '#FDF0F0', border: C.red,     text: C.redDark },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function SeverityPicker({ value, onChange }) {
+function formatDisplayDate(raw) {
+  if (!raw) return 'Unknown date';
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function groupByDate(concerns) {
+  const groups = {};
+  concerns.forEach(c => {
+    const key = c.symptom_date || c.date_logged || 'Unknown date';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+  return Object.entries(groups);
+}
+
+const URGENCY = {
+  high:   { dot: C.red,     label: 'HIGH',   labelColor: C.redDark,  labelBg: '#FDF0F0' },
+  medium: { dot: '#D4A500', label: 'MEDIUM', labelColor: '#7A5E00',  labelBg: '#FFFBEA' },
+  low:    { dot: C.gray400, label: 'LOW',    labelColor: C.gray400,  labelBg: C.gray100 },
+};
+
+// ─── Severity read-only display ───────────────────────────────────────────────
+function SeverityDots({ value }) {
   return (
-    <View>
-      <View style={sev.row}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-          <Pressable
-            key={n}
-            style={[sev.seg, n <= value && sev.segActive]}
-            onPress={() => onChange(n)}
-          />
-        ))}
-      </View>
-      <View style={sev.labels}>
-        <Text style={sev.lbl}>Mild</Text>
-        <Text style={sev.num}>{value}</Text>
-        <Text style={sev.lbl}>Severe</Text>
-      </View>
+    <View style={sev.row}>
+      {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+        <View
+          key={n}
+          style={[
+            sev.dot,
+            n <= value && (value >= 7 ? sev.dotHigh : value >= 4 ? sev.dotMed : sev.dotLow),
+          ]}
+        />
+      ))}
+      <Text style={sev.label}>{value}/10</Text>
     </View>
   );
 }
 
 const sev = StyleSheet.create({
-  row:       { flexDirection: 'row', gap: 4, height: 20 },
-  seg:       { flex: 1, borderRadius: 3, backgroundColor: C.gray200 },
-  segActive: { backgroundColor: C.red },
-  labels:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  lbl:       { fontSize: 11, color: C.gray400, fontFamily: FONTS.body },
-  num:       { fontFamily: FONTS.display, fontSize: 26, color: C.black },
+  row:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: C.gray200 },
+  dotLow:  { backgroundColor: '#22C55E' },
+  dotMed:  { backgroundColor: '#D4A500' },
+  dotHigh: { backgroundColor: C.red },
+  label:   { fontSize: 12, color: C.gray400, fontFamily: FONTS.body, marginLeft: 4 },
 });
 
-export default function EditConcernScreen() {
-  const router = useRouter();
+// ─── Screen ───────────────────────────────────────────────────────────────────
+export default function TimelineScreen() {
   const insets = useSafeAreaInsets();
-  const { concern: concernParam } = useLocalSearchParams();
+  const [concerns, setConcerns] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
-  const original = JSON.parse(concernParam || '{}');
+  useFocusEffect(
+    useCallback(() => { load(); }, [])
+  );
 
-  const [bodyArea,   setBodyArea]   = useState(original.body_area   || '');
-  const [symptom,    setSymptom]    = useState(original.symptom     || '');
-  const [notes,      setNotes]      = useState(original.notes       || '');
-  const [severity,   setSeverity]   = useState(original.severity    || 5);
-  const [urgency,    setUrgency]    = useState(original.urgency_level || 'medium');
-  const [dateLogged, setDateLogged] = useState(original.date_logged || '');
-  const [saving,     setSaving]     = useState(false);
-  const [deleting,   setDeleting]   = useState(false);
-  const [feedback,   setFeedback]   = useState(null);
-
-  async function handleSave() {
-    if (!symptom.trim()) {
-      setFeedback({ type: 'err', msg: 'Symptom description is required.' });
-      return;
-    }
-    setSaving(true);
-    setFeedback(null);
+  async function load() {
+    setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/concerns/${original.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          body_area:     bodyArea,
-          symptom:       symptom.trim(),
-          urgency_level: urgency,
-          severity,
-          notes:         notes.trim(),
-          date_logged:   dateLogged,
-        }),
-      });
-      if (!r.ok) throw new Error('Update failed');
-      setFeedback({ type: 'ok', msg: 'Saved!' });
-      setTimeout(() => router.back(), 900);
+      const r = await fetch(`${API_BASE}/concerns`);
+      const d = await r.json();
+      setConcerns((d.concerns || []).slice().reverse());
     } catch {
-      setFeedback({ type: 'err', msg: 'Could not save — is the server running?' });
+      setConcerns([]);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
 
-  function handleDelete() {
+  function confirmDelete(c) {
     Alert.alert(
-      'Delete concern?',
-      'This cannot be undone.',
+      'Remove entry?',
+      `This will permanently remove "${c.symptom}" from your health history.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              const r = await fetch(`${API_BASE}/concerns/${original.id}`, { method: 'DELETE' });
-              if (!r.ok) throw new Error('Delete failed');
-              router.back();
-            } catch {
-              Alert.alert('Error', 'Could not delete — is the server running?');
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
+        { text: 'Remove', style: 'destructive', onPress: () => doDelete(c) },
       ]
     );
   }
 
+  async function doDelete(c) {
+    setDeleting(c.id);
+    try {
+      const r = await fetch(`${API_BASE}/concerns/${c.id}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error();
+      setConcerns(prev => prev.filter(x => x.id !== c.id));
+      setExpanded(null);
+    } catch {
+      Alert.alert('Error', 'Could not remove — is the server running?');
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  const groups = groupByDate(concerns);
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: C.white }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
 
       {/* Header */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backTxt}>← Back</Text>
-        </Pressable>
-        <Text style={styles.topTitle}>EDIT CONCERN</Text>
-        <Pressable onPress={handleDelete} disabled={deleting} style={styles.deleteBtn}>
-          <Text style={styles.deleteTxt}>{deleting ? '...' : 'Delete'}</Text>
-        </Pressable>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>TIMELINE</Text>
+          <Text style={styles.subtitle}>Your health history</Text>
+        </View>
+        {!loading && concerns.length > 0 && (
+          <View style={styles.countBadge}>
+            <Text style={styles.countTxt}>{concerns.length}</Text>
+            <Text style={styles.countLbl}>entries</Text>
+          </View>
+        )}
       </View>
+
+      {/* IBM Granite strip */}
+      {!loading && concerns.length >= 3 && (
+        <View style={styles.ibmStrip}>
+          <View style={styles.ibmDot} />
+          <Text style={styles.ibmTxt}>
+            IBM Granite is analyzing patterns across {concerns.length} entries
+          </Text>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
-        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40, paddingTop: 4 }}
       >
-        {/* Date */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Date Logged</Text>
-          <TextInput
-            style={styles.input}
-            value={dateLogged}
-            onChangeText={setDateLogged}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={C.gray400}
-          />
-        </View>
+        {loading ? (
+          <ActivityIndicator color={C.red} style={{ padding: 60 }} />
 
-        {/* Body area */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Body Area</Text>
-          <TextInput
-            style={styles.input}
-            value={bodyArea}
-            onChangeText={setBodyArea}
-            placeholder="e.g. Left Ankle"
-            placeholderTextColor={C.gray400}
-          />
-        </View>
-
-        {/* Severity */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Pain Severity</Text>
-          <SeverityPicker value={severity} onChange={setSeverity} />
-        </View>
-
-        {/* Urgency */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Urgency Level</Text>
-          <View style={styles.urgRow}>
-            {URGENCIES.map(u => (
-              <Pressable
-                key={u.key}
-                style={[
-                  styles.urgBtn,
-                  urgency === u.key && { backgroundColor: u.bg, borderColor: u.border },
-                ]}
-                onPress={() => setUrgency(u.key)}
-              >
-                <Text style={[
-                  styles.urgTxt,
-                  urgency === u.key && { color: u.text, fontFamily: FONTS.bodySemi },
-                ]}>
-                  {u.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Symptom description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Describe the pain</Text>
-          <TextInput
-            style={[styles.input, { height: 90 }]}
-            value={symptom}
-            onChangeText={setSymptom}
-            placeholder="e.g. Sharp throbbing, worse when walking..."
-            placeholderTextColor={C.gray400}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Additional Notes (optional)</Text>
-          <TextInput
-            style={[styles.input, { height: 64 }]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="What makes it better or worse?"
-            placeholderTextColor={C.gray400}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {feedback && (
-          <View style={[styles.feedbackBox, feedback.type === 'ok' ? styles.fbOk : styles.fbErr]}>
-            <Text style={[styles.fbTxt, { color: feedback.type === 'ok' ? '#166534' : C.redDark }]}>
-              {feedback.msg}
+        ) : concerns.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Svg width={48} height={48} viewBox="0 0 48 48">
+              <Circle cx={24} cy={24} r={22} stroke={C.gray200} strokeWidth={2} fill="none" />
+              <Path d="M24 14v12l6 6" stroke={C.gray400} strokeWidth={2.5} strokeLinecap="round" />
+            </Svg>
+            <Text style={styles.emptyTitle}>No history yet</Text>
+            <Text style={styles.emptyBody}>
+              Log your first concern and IBM Granite will begin tracking patterns here.
             </Text>
           </View>
-        )}
 
-        <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.btnRed, pressed && { opacity: 0.85 }, saving && { opacity: 0.5 }]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <Text style={styles.btnRedTxt}>{saving ? 'SAVING...' : 'SAVE CHANGES'}</Text>
-          </Pressable>
-          <Pressable style={styles.btnOutline} onPress={() => router.back()}>
-            <Text style={styles.btnOutlineTxt}>Cancel</Text>
-          </Pressable>
-        </View>
+        ) : (
+          groups.map(([dateKey, entries]) => (
+            <View key={dateKey} style={styles.group}>
+
+              {/* Date header */}
+              <View style={styles.dateRow}>
+                <Text style={styles.dateLabel}>{formatDisplayDate(dateKey)}</Text>
+                <View style={styles.dateLine} />
+              </View>
+
+              {/* Entries for this date */}
+              {entries.map((c, i) => {
+                const urg = URGENCY[c.urgency_level] || URGENCY.low;
+                const open = expanded === (c.id ?? `${dateKey}-${i}`);
+                const key  = c.id ?? `${dateKey}-${i}`;
+
+                return (
+                  <Pressable
+                    key={key}
+                    style={({ pressed }) => [
+                      styles.entry,
+                      open && styles.entryOpen,
+                      pressed && !open && { opacity: 0.82 },
+                    ]}
+                    onPress={() => setExpanded(open ? null : key)}
+                  >
+                    {/* Left accent bar */}
+                    <View style={[styles.accentBar, { backgroundColor: urg.dot }]} />
+
+                    <View style={styles.entryBody}>
+                      {/* Top row */}
+                      <View style={styles.entryTop}>
+                        <Text style={styles.entrySymptom} numberOfLines={open ? undefined : 2}>
+                          {c.symptom || 'No description'}
+                        </Text>
+                        <View style={[styles.urgBadge, { backgroundColor: urg.labelBg }]}>
+                          <Text style={[styles.urgBadgeTxt, { color: urg.labelColor }]}>
+                            {urg.label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Body area */}
+                      <Text style={styles.entryArea}>{c.body_area}</Text>
+
+                      {/* Expanded detail */}
+                      {open && (
+                        <View style={styles.detail}>
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailKey}>Severity</Text>
+                            <SeverityDots value={c.severity || 0} />
+                          </View>
+
+                          {!!c.notes && (
+                            <View style={[styles.detailRow, { alignItems: 'flex-start' }]}>
+                              <Text style={styles.detailKey}>Notes</Text>
+                              <Text style={styles.detailVal}>{c.notes}</Text>
+                            </View>
+                          )}
+
+                          <Pressable
+                            style={({ pressed }) => [
+                              styles.removeBtn,
+                              pressed && { opacity: 0.65 },
+                              deleting === c.id && { opacity: 0.4 },
+                            ]}
+                            onPress={() => confirmDelete(c)}
+                            disabled={!!deleting}
+                          >
+                            <Svg width={13} height={13} viewBox="0 0 13 13">
+                              <Path
+                                d="M1.5 3.5h10M4.5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M2.5 3.5l.6 7a.5.5 0 0 0 .5.5h5.8a.5.5 0 0 0 .5-.5l.6-7"
+                                stroke={C.redDark}
+                                strokeWidth={1.2}
+                                strokeLinecap="round"
+                                fill="none"
+                              />
+                            </Svg>
+                            <Text style={styles.removeTxt}>
+                              {deleting === c.id ? 'Removing…' : 'Remove from history'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      )}
+
+                      {/* Chevron */}
+                      <View style={styles.chevronRow}>
+                        <Svg width={14} height={14} viewBox="0 0 14 14">
+                          <Path
+                            d={open ? 'M3 9l4-4 4 4' : 'M3 5l4 4 4-4'}
+                            stroke={C.gray400}
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                        </Svg>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))
+        )}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.gray200 },
-  backBtn:    { paddingVertical: 8, paddingHorizontal: 4, minWidth: 60 },
-  backTxt:    { fontSize: 14, color: C.red, fontFamily: FONTS.bodySemi },
-  topTitle:   { fontFamily: FONTS.display, fontSize: 20, color: C.black, letterSpacing: 1 },
-  deleteBtn:  { paddingVertical: 8, paddingHorizontal: 4, minWidth: 60, alignItems: 'flex-end' },
-  deleteTxt:  { fontSize: 14, color: C.red, fontFamily: FONTS.bodySemi },
+  root:   { flex: 1, backgroundColor: C.white },
 
-  scroll:     { flex: 1 },
-  section:    { paddingHorizontal: 20, marginTop: 16 },
-  label:      { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: C.gray400, marginBottom: 6, fontFamily: FONTS.bodySemi },
-  input:      { backgroundColor: C.gray100, borderWidth: 1.5, borderColor: C.gray200, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: C.black, fontFamily: FONTS.body },
+  header:     { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  title:      { fontFamily: FONTS.display, fontSize: 32, color: C.black, letterSpacing: 1 },
+  subtitle:   { fontSize: 12, color: C.gray400, fontFamily: FONTS.body, marginTop: 1 },
+  countBadge: { alignItems: 'center', backgroundColor: C.gray100, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.gray200 },
+  countTxt:   { fontFamily: FONTS.display, fontSize: 24, color: C.black, lineHeight: 26 },
+  countLbl:   { fontSize: 10, color: C.gray400, fontFamily: FONTS.body, textTransform: 'uppercase', letterSpacing: 1 },
 
-  urgRow:    { flexDirection: 'row', gap: 8 },
-  urgBtn:    { flex: 1, paddingVertical: 9, borderWidth: 1.5, borderColor: C.gray200, borderRadius: 5, alignItems: 'center', backgroundColor: C.gray100 },
-  urgTxt:    { fontSize: 13, color: C.gray400, fontFamily: FONTS.body },
+  ibmStrip:   { flexDirection: 'row', alignItems: 'center', gap: 7, marginHorizontal: 20, marginBottom: 10, backgroundColor: '#F0FFF4', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#BBF7D0' },
+  ibmDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
+  ibmTxt:     { fontSize: 11, color: '#166534', fontFamily: FONTS.body, flex: 1 },
 
-  feedbackBox: { marginHorizontal: 20, marginTop: 12, padding: 10, borderRadius: 8 },
-  fbOk:      { backgroundColor: '#F0FFF4' },
-  fbErr:     { backgroundColor: '#FDF0F0' },
-  fbTxt:     { fontSize: 13, fontFamily: FONTS.body },
+  scroll: { flex: 1 },
 
-  actions:   { paddingHorizontal: 20, gap: 10, marginTop: 20 },
-  btnRed:    { backgroundColor: C.red, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  btnRedTxt: { fontFamily: FONTS.display, fontSize: 20, letterSpacing: 2, color: C.white },
-  btnOutline: { borderWidth: 1.5, borderColor: C.gray200, borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
-  btnOutlineTxt: { fontSize: 15, fontWeight: '600', color: C.black, fontFamily: FONTS.bodySemi },
+  emptyWrap:  { alignItems: 'center', paddingTop: 70, paddingHorizontal: 40, gap: 12 },
+  emptyTitle: { fontSize: 16, fontFamily: FONTS.bodySemi, color: C.black },
+  emptyBody:  { fontSize: 13, color: C.gray400, fontFamily: FONTS.body, textAlign: 'center', lineHeight: 20 },
+
+  group: { paddingHorizontal: 20, marginBottom: 6 },
+
+  dateRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, marginTop: 16 },
+  dateLabel:{ fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: C.gray400, fontFamily: FONTS.bodySemi },
+  dateLine: { flex: 1, height: 1, backgroundColor: C.gray200 },
+
+  entry:      { flexDirection: 'row', backgroundColor: C.gray100, borderRadius: 10, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: 'transparent' },
+  entryOpen:  { backgroundColor: C.white, borderColor: C.gray200 },
+  accentBar:  { width: 4, borderRadius: 2, marginVertical: 0 },
+  entryBody:  { flex: 1, paddingHorizontal: 14, paddingVertical: 12 },
+
+  entryTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 4 },
+  entrySymptom: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: C.black, lineHeight: 21 },
+  entryArea:    { fontSize: 12, color: C.gray400, fontFamily: FONTS.body },
+
+  urgBadge:    { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  urgBadgeTxt: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONTS.bodySemi },
+
+  detail:     { marginTop: 14, borderTopWidth: 1, borderTopColor: C.gray200, paddingTop: 12, gap: 10 },
+  detailRow:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  detailKey:  { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: C.gray400, fontFamily: FONTS.bodySemi, width: 64 },
+  detailVal:  { flex: 1, fontSize: 13, color: C.black, fontFamily: FONTS.body, lineHeight: 19 },
+
+  removeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.gray200, alignSelf: 'flex-start' },
+  removeTxt: { fontSize: 12, color: C.redDark, fontFamily: FONTS.bodySemi },
+
+  chevronRow: { alignItems: 'flex-end', marginTop: 6 },
 });
