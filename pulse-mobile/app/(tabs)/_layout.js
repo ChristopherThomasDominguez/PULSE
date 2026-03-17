@@ -3,6 +3,15 @@ import { Tabs } from 'expo-router';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import { C } from '../../constants/colors';
 
+function ProfileIcon({ color }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 20 20">
+      <Circle cx={10} cy={7} r={3.5} stroke={color} strokeWidth={1.5} fill="none" />
+      <Path d="M3 17c0-3.87 3.13-7 7-7s7 3.13 7 7" stroke={color} strokeWidth={1.5} strokeLinecap="round" fill="none" />
+    </Svg>
+  );
+}
+
 function HomeIcon({ color }) {
   return (
     <Svg width={22} height={22} viewBox="0 0 20 20">
@@ -89,6 +98,13 @@ export default function TabLayout() {
         options={{
           title: 'Timeline',
           tabBarIcon: ({ color }) => <TimelineIcon color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <ProfileIcon color={color} />,
         }}
       />
       {/* Hidden routes — still reachable by navigation, just not in tab bar */}

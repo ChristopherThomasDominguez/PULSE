@@ -1,10 +1,11 @@
-// app/doctor-notes.tsx — Screen 06: Upload / Paste Doctor Notes
+// app/doctor-notes.tsx — After Visit: upload photo or paste doctor notes
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, KeyboardAvoidingView, Platform, Alert, Image, ActionSheetIOS,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Colors, Fonts, FontSize, Radius } from '../constants/theme';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
@@ -16,13 +17,83 @@ const SAMPLE_NOTE =
   "Follow up in 4 weeks if no improvement. Orthopedic referral if pain persists.";
 
 export default function DoctorNotesScreen() {
-  const [noteText, setNoteText]   = useState('');
+  const [noteText, setNoteText]     = useState('');
+  const [photoUri, setPhotoUri]     = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
+
+  async function requestAndPickFromGallery() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission needed',
+        'Please allow access to your photo library so you can upload doctor notes.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
+
+  async function requestAndTakePhoto() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission needed',
+        'Please allow camera access so you can photograph your doctor notes.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
+
+  function handleUploadPress() {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Take Photo', 'Choose from Library'],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) requestAndTakePhoto();
+          if (idx === 2) requestAndPickFromGallery();
+        }
+      );
+    } else {
+      Alert.alert('Upload Notes', 'Select a source', [
+        { text: 'Camera', onPress: requestAndTakePhoto },
+        { text: 'Photo Library', onPress: requestAndPickFromGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  }
 
   async function handleExtract() {
     const text = noteText.trim();
-    if (!text) {
-      Alert.alert('Empty notes', 'Please paste your doctor notes first.');
+    if (!text && !photoUri) {
+      Alert.alert('Nothing to extract', 'Please paste your doctor notes or upload a photo first.');
+      return;
+    }
+    // If only a photo is uploaded (no text), prompt user to also paste text
+    if (!text && photoUri) {
+      Alert.alert(
+        'Photo uploaded',
+        'Photo captured! For AI extraction, please also paste the text from your notes below. Full image-to-text OCR is coming soon.',
+        [{ text: 'Got it' }]
+      );
       return;
     }
     setExtracting(true);
@@ -34,7 +105,6 @@ export default function DoctorNotesScreen() {
         params: { extracted: JSON.stringify(result) },
       });
     } catch {
-      // Fallback with mock data
       router.replace({
         pathname: '/notes-extracted',
         params: { extracted: JSON.stringify({
@@ -67,22 +137,50 @@ export default function DoctorNotesScreen() {
         </TouchableOpacity>
 
         <Text style={styles.title}>After Your Visit</Text>
-        <Text style={styles.subtitle}>Add your doctor notes to build your health timeline</Text>
+        <Text style={styles.subtitle}>Upload a photo or paste your doctor notes to build your health timeline</Text>
 
-        {/* Upload drop zone (visual only — no file API in Expo Go managed) */}
-        <View style={styles.dropZone}>
-          <Svg width={36} height={36} viewBox="0 0 36 36" style={styles.uploadIcon}>
-            <Circle cx={18} cy={18} r={17} fill={Colors.tealLight} />
-            <Path
-              d="M18 10v16M11 17l7-7 7 7"
-              stroke={Colors.teal}
-              strokeWidth={2}
-              strokeLinecap="round"
-              fill="none"
-            />
-          </Svg>
-          <Text style={styles.dropTitle}>Upload Notes or Photo</Text>
-          <Text style={styles.dropSub}>PDF, JPG, PNG supported</Text>
+        {/* Photo picker zone */}
+        {photoUri ? (
+          <View style={styles.photoPreviewWrap}>
+            <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+            <TouchableOpacity style={styles.changePhotoBtn} onPress={handleUploadPress}>
+              <Text style={styles.changePhotoTxt}>Change photo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.dropZone} onPress={handleUploadPress} activeOpacity={0.75}>
+            <Svg width={36} height={36} viewBox="0 0 36 36" style={styles.uploadIcon}>
+              <Circle cx={18} cy={18} r={17} fill={Colors.tealLight} />
+              <Path
+                d="M18 10v16M11 17l7-7 7 7"
+                stroke={Colors.teal}
+                strokeWidth={2}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </Svg>
+            <Text style={styles.dropTitle}>Upload Notes or Photo</Text>
+            <Text style={styles.dropSub}>Tap to use camera or choose from library</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Action buttons row */}
+        <View style={styles.photoActionsRow}>
+          <TouchableOpacity style={styles.photoActionBtn} onPress={requestAndTakePhoto}>
+            <Svg width={16} height={16} viewBox="0 0 24 24">
+              <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke={Colors.teal} strokeWidth={1.8} fill="none" strokeLinecap="round" />
+              <Circle cx={12} cy={13} r={4} stroke={Colors.teal} strokeWidth={1.8} fill="none" />
+            </Svg>
+            <Text style={styles.photoActionTxt}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.photoActionBtn} onPress={requestAndPickFromGallery}>
+            <Svg width={16} height={16} viewBox="0 0 24 24">
+              <Path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" stroke={Colors.teal} strokeWidth={1.8} fill="none" />
+              <Circle cx={8.5} cy={8.5} r={1.5} stroke={Colors.teal} strokeWidth={1.5} fill="none" />
+              <Path d="M21 15l-5-5L5 21" stroke={Colors.teal} strokeWidth={1.8} strokeLinecap="round" fill="none" />
+            </Svg>
+            <Text style={styles.photoActionTxt}>Gallery</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Divider */}
@@ -104,7 +202,6 @@ export default function DoctorNotesScreen() {
           textAlignVertical="top"
         />
 
-        {/* Sample note helper */}
         <TouchableOpacity onPress={() => setNoteText(SAMPLE_NOTE)} style={styles.sampleBtn}>
           <Text style={styles.sampleBtnText}>Use sample note for demo</Text>
         </TouchableOpacity>
@@ -136,7 +233,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 40 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
   backTxt: { fontFamily: Fonts.sansMedium, fontSize: FontSize.body, color: Colors.text },
-  title: { fontFamily: Fonts.serif, fontSize: 22, color: Colors.text, marginBottom: 4 },
+  title: { fontFamily: Fonts.serif, fontSize: FontSize.xl, color: Colors.text, marginBottom: 4 },
   subtitle: { fontFamily: Fonts.sans, fontSize: FontSize.small, color: Colors.textMuted, marginBottom: 18 },
   dropZone: {
     borderWidth: 2,
@@ -146,11 +243,29 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: 'center',
     backgroundColor: Colors.surface,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   uploadIcon: { marginBottom: 10 },
   dropTitle: { fontFamily: Fonts.sansMedium, fontSize: FontSize.body, color: Colors.text, marginBottom: 4 },
   dropSub: { fontFamily: Fonts.sans, fontSize: FontSize.small, color: Colors.textFaint },
+  photoPreviewWrap: { borderRadius: Radius.md, overflow: 'hidden', marginBottom: 10 },
+  photoPreview: { width: '100%', height: 200 },
+  changePhotoBtn: { backgroundColor: Colors.tealLight, paddingVertical: 8, alignItems: 'center' },
+  changePhotoTxt: { fontFamily: Fonts.sansMedium, fontSize: FontSize.small, color: Colors.teal },
+  photoActionsRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  photoActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: Radius.xs,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.surface,
+  },
+  photoActionTxt: { fontFamily: Fonts.sansMedium, fontSize: FontSize.small, color: Colors.teal },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   orLine: { flex: 1, height: 1, backgroundColor: Colors.border },
   orText: { fontFamily: Fonts.sans, fontSize: FontSize.tiny, color: Colors.textFaint },
@@ -161,7 +276,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderStrong,
     borderRadius: Radius.xs,
     padding: 12,
-    minHeight: 180,
+    minHeight: 160,
     fontFamily: Fonts.sans,
     fontSize: FontSize.small + 1,
     color: Colors.text,

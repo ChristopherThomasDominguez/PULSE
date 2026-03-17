@@ -82,10 +82,11 @@ export default function HomeScreen() {
   const [apiStatus, setApiStatus] = useState('connecting');
   const [concerns, setConcerns]   = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [concernsExpanded, setConcernsExpanded] = useState(false);
 
   async function checkHealth() {
     try {
-      const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+      const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(8000) });
       const d = await r.json();
       setApiStatus(d.granite_ready ? 'granite' : 'mock');
     } catch {
@@ -120,7 +121,8 @@ export default function HomeScreen() {
 
   const count   = concerns.length;
   const peakSev = count ? Math.max(...concerns.map(c => c.severity || 0)) : 0;
-  const recent  = concerns.slice(-4).reverse();
+  const recentAll = concerns.slice(-3).reverse();
+  const recent  = concernsExpanded ? recentAll : recentAll.slice(0, 1);
 
   const granite  = getGraniteState(count, peakSev, apiStatus);
 
@@ -157,9 +159,18 @@ export default function HomeScreen() {
           <Text style={styles.heroHeadline}>{granite.headline}</Text>
           <Text style={styles.heroSub}>{granite.sub}</Text>
           <View style={styles.heroPills}>
-            <View style={[styles.heroPill, { borderColor: granite.accent + '55' }]}>
-              <Text style={styles.heroPillTxt}>{granite.pillA}</Text>
-            </View>
+            {apiStatus === 'offline' ? (
+              <Pressable
+                style={[styles.heroPill, { borderColor: granite.accent + '55' }]}
+                onPress={checkHealth}
+              >
+                <Text style={styles.heroPillTxt}>Tap to retry</Text>
+              </Pressable>
+            ) : (
+              <View style={[styles.heroPill, { borderColor: granite.accent + '55' }]}>
+                <Text style={styles.heroPillTxt}>{granite.pillA}</Text>
+              </View>
+            )}
             {granite.pillB && (
               <View style={[styles.heroPill, { borderColor: granite.accent + '55' }]}>
                 <Text style={styles.heroPillTxt}>{granite.pillB}</Text>
@@ -193,36 +204,51 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            recent.map((c, i) => {
-              const high = c.urgency_level === 'high';
-              const dateDisplay = c.symptom_date || c.date_logged || 'Today';
-              return (
+            <>
+              {recent.map((c, i) => {
+                const high = c.urgency_level === 'high';
+                const dateDisplay = c.symptom_date || c.date_logged || 'Today';
+                const isLast = i === recent.length - 1 && (concernsExpanded || recentAll.length <= 1);
+                return (
+                  <Pressable
+                    key={c.id || i}
+                    style={[
+                      styles.concernRow,
+                      isLast && { borderBottomWidth: 0 },
+                    ]}
+                    onPress={() => router.push({
+                      pathname: '/(tabs)/edit-concern',
+                      params: { concern: JSON.stringify(c) },
+                    })}
+                  >
+                    <View style={[styles.cDot, { backgroundColor: high ? C.red : C.gray400 }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cName} numberOfLines={1}>{c.symptom || 'No description'}</Text>
+                      <Text style={styles.cMeta}>
+                        {c.body_area} · {dateDisplay} · Sev {c.severity}/10
+                      </Text>
+                    </View>
+                    <View style={[styles.badge, { backgroundColor: high ? '#FDF0F0' : C.gray100 }]}>
+                      <Text style={[styles.badgeTxt, { color: high ? C.redDark : C.gray400 }]}>
+                        {(c.urgency_level || 'low').toUpperCase()}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+              {recentAll.length > 1 && (
                 <Pressable
-                  key={c.id || i}
-                  style={[
-                    styles.concernRow,
-                    i === recent.length - 1 && { borderBottomWidth: 0 },
-                  ]}
-                  onPress={() => router.push({
-                    pathname: '/(tabs)/edit-concern',
-                    params: { concern: JSON.stringify(c) },
-                  })}
+                  style={styles.expandRow}
+                  onPress={() => setConcernsExpanded(v => !v)}
                 >
-                  <View style={[styles.cDot, { backgroundColor: high ? C.red : C.gray400 }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cName} numberOfLines={1}>{c.symptom || 'No description'}</Text>
-                    <Text style={styles.cMeta}>
-                      {c.body_area} · {dateDisplay} · Sev {c.severity}/10
-                    </Text>
-                  </View>
-                  <View style={[styles.badge, { backgroundColor: high ? '#FDF0F0' : C.gray100 }]}>
-                    <Text style={[styles.badgeTxt, { color: high ? C.redDark : C.gray400 }]}>
-                      {(c.urgency_level || 'low').toUpperCase()}
-                    </Text>
-                  </View>
+                  <Text style={styles.expandTxt}>
+                    {concernsExpanded
+                      ? 'Show less'
+                      : `+${recentAll.length - 1} more concern${recentAll.length - 1 > 1 ? 's' : ''}`}
+                  </Text>
                 </Pressable>
-              );
-            })
+              )}
+            </>
           )}
         </View>
 
@@ -317,6 +343,8 @@ const styles = StyleSheet.create({
   cName:        { fontSize: 14, fontWeight: '500', color: C.black, fontFamily: FONTS.bodyMedium },
   cMeta:        { fontSize: 12, color: C.gray400, marginTop: 2, fontFamily: FONTS.body },
   badge:        { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
+  expandRow:    { paddingVertical: 11, paddingHorizontal: 14, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  expandTxt:    { fontSize: 12, color: '#D42B2B', fontWeight: '600', letterSpacing: 0.3 },
   badgeTxt:     { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONTS.bodySemi },
 
   quickGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

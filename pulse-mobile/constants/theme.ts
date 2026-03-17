@@ -35,3 +35,12 @@ export const Fonts = {
   sansMedium: 'DMSans_500Medium',
   sansSemiBold: 'DMSans_600SemiBold',
 };
+
+export const FontSize = {
+  tiny:  10,
+  small: 12,
+  body:  14,
+  md:    16,
+  lg:    18,
+  xl:    22,
+};
