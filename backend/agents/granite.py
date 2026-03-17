@@ -24,7 +24,8 @@ if not MOCK:
         _credentials = Credentials(api_key=IBM_API_KEY, url=IBM_URL)
         _params = {
             "decoding_method": "greedy",
-            "max_new_tokens": 512,
+            "max_new_tokens": 1024,
+            "min_new_tokens": 10,
             "temperature": 0,
         }
         _model = ModelInference(
@@ -50,8 +51,10 @@ def granite_generate(prompt: str, max_tokens: int = 512) -> str:
         return "__MOCK__"
 
     try:
-        # Temporarily override max tokens if caller wants more/less
-        result = _model.generate_text(prompt)
+        # Wrap in Granite instruct chat format
+        formatted = f"<|system|>\nYou are a helpful medical assistant. Respond only with valid JSON.\n<|user|>\n{prompt}\n<|assistant|>\n"
+        result = _model.generate_text(formatted)
+        print(f"[Granite] raw response: {repr(result)}")
         return result.strip() if result else "__MOCK__"
     except Exception as e:
         print(f"[Granite] generation error: {e}")
